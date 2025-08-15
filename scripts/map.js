@@ -126,11 +126,21 @@ $(window).on('load', function() {
         );
 
       if (point.Latitude !== '' && point.Longitude !== '') {
+        // Convert URLs in Sources to clickable links
+        var sourcesLinks = '';
+        if (point['Sources'] && point['Sources'] != '') {
+          // Split multiple URLs by space or comma
+          var urls = point['Sources'].split(/[\s,]+/);
+          urls.forEach(function(url) {
+            sourcesLinks += `<a href="${url}" target="_blank">${url}</a><br>`;
+          });
+        }
         var popupContent = `
           <b>${point['Name']}</b><br>
           ${point['Image'] ? ('<img src="' + point['Image'] + '"><br>') : ''}
           <b>Vehicle:</b> ${point['Vehicle']}<br>
           ${point['Description']}
+          ${sourcesLinks}
         `;
         var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
           .bindPopup(popupContent);
