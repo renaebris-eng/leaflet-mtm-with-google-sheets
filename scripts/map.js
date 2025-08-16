@@ -139,8 +139,8 @@ $(window).on('load', function() {
           <b>${point['Name']}</b><br>
           ${point['Image'] ? ('<img src="' + point['Image'] + '"><br>') : ''}
           <b>Vehicle:</b> ${point['Vehicle']}<br>
-          ${point['Description']}
-          ${sourcesLinks}
+          ${point['Description']}<br>
+          ${sourcesLinks ? '<br>' + sourcesLinks : ''}
         `;
         var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
           .bindPopup(popupContent);
