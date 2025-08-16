@@ -142,8 +142,12 @@ $(window).on('load', function() {
           ${point['Description']}<br>
           ${sourcesLinks ? '<br>' + sourcesLinks : ''}
         `;
-        var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
-          .bindPopup(popupContent);
+        var marker = L.marker([point.Latitude, point.Longitude], {
+           icon: icon,
+           title: name + " | " + vehicle + " | " + description 
+        }).bindPopup(
+               "<b>" + name + "</b><br>Vehicle: " + vehicle + "<br>" + description
+        );
         if (layers !== undefined && layers.length !== 1) {
           marker.addTo(layers[point.Group]);
         }
@@ -1148,53 +1152,6 @@ $(window).on('load', function() {
       }
       return val;
   }
-
-  // Search function
-  // Fetch data from Google Sheets (adjust the URL to your sheet)
-fetch("https://docs.google.com/spreadsheets/d/1Uh4khylvGQXegf22VDY-WvX7Y08Xbf9frta_xoXJfvI/gviz/tq?tqx=out:json")
-  .then(response => response.text())
-  .then(dataText => {
-    // Clean up Google’s JSON response
-    const json = JSON.parse(dataText.substring(47).slice(0, -2));
-    const rows = json.table.rows.map(r => r.c.map(cell => cell ? cell.v : ""));
-
-    createMarkers(rows);
-  });
-
-// Create markers and add search
-function createMarkers(rows) {
-  var markers = L.markerClusterGroup();
-
-  rows.forEach(row => {
-    const lat = parseFloat(row[0]);      // Latitude column
-    const lng = parseFloat(row[1]);      // Longitude column
-    const name = row[2];                 // Name column
-    const vehicle = row[3];              // Vehicle column
-    const description = row[4];          // Description column
-
-    // Combine the fields you want searchable
-    const searchText = `${name} | ${vehicle} | ${description}`;
-
-    const marker = L.marker([lat, lng], { title: searchText })
-      .bindPopup(`<b>${name}</b><br>Vehicle: ${vehicle}<br>${description}`);
-
-    markers.addLayer(marker);
-  });
-
-  map.addLayer(markers);
-
-  // Add the search control
-  var searchControl = new L.Control.Search({
-    layer: markers,
-    propertyName: 'title', // search Name, Vehicle, Description
-    marker: false,
-    moveToLocation: (latlng, title, map) => {
-      map.setView(latlng, 10);
-    }
-  });
-
-  map.addControl(searchControl);
-}
 
   
 });
