@@ -695,6 +695,16 @@ $(window).on('load', function() {
     map.on('zoomend', function() {
       togglePolygonLabels();
     });
+    // Add marker search control (searches Name + Vehicle + Description)
+    var searchControl = new L.Control.Search({
+        layer: L.layerGroup(markerArray),   // use your markerArray since you’re pushing markers into it
+        propertyName: 'title',
+        marker: false,
+        moveToLocation: function(latlng, title, map) {
+            map.setView(latlng, 10);
+        }
+    });
+    map.addControl(searchControl);
 
     addTitle();
 
