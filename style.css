@@ -289,3 +289,9 @@ span.legend-icon {
 .ladder form, .ladder div {
   display: block;
 }
+
+.leaflet-popup-content {
+  max-height: 200px;  /* limit popup height */
+  overflow-y: auto;   /* make it scroll vertically if too long */
+}
+
