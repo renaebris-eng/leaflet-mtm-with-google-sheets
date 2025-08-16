@@ -142,14 +142,10 @@ $(window).on('load', function() {
           ${point['Description']}<br>
           ${sourcesLinks ? '<br>' + sourcesLinks : ''}
         `;
-        var marker = L.marker([point.Latitude, point.Longitude], {
-           icon: icon,
-           title: name + " | " + vehicle + " | " + description 
-        }).bindPopup(
-               "<b>" + name + "</b><br>Vehicle: " + vehicle + "<br>" + description
-        );
-        if (layers !== undefined && layers.length !== 1) {
-          marker.addTo(layers[point.Group]);
+        var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
+           .bindPopup(popupContent);
+          if (layers !== undefined && layers.length !== 1) {
+           marker.addTo(layers[point.Group]);
         }
 
         markerArray.push(marker);
