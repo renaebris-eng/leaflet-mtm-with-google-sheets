@@ -1148,16 +1148,29 @@ $(window).on('load', function() {
       }
       return val;
   }
+
   // Search function
-  function createMarkers(rows) {
+  // Fetch data from Google Sheets (adjust the URL to your sheet)
+fetch("https://docs.google.com/spreadsheets/d/1Uh4khylvGQXegf22VDY-WvX7Y08Xbf9frta_xoXJfvI/gviz/tq?tqx=out:json")
+  .then(response => response.text())
+  .then(dataText => {
+    // Clean up Google’s JSON response
+    const json = JSON.parse(dataText.substring(47).slice(0, -2));
+    const rows = json.table.rows.map(r => r.c.map(cell => cell ? cell.v : ""));
+
+    createMarkers(rows);
+  });
+
+// Create markers and add search
+function createMarkers(rows) {
   var markers = L.markerClusterGroup();
 
   rows.forEach(row => {
     const lat = parseFloat(row[0]);      // Latitude column
     const lng = parseFloat(row[1]);      // Longitude column
-    const name = row[2];                  // Name column
-    const vehicle = row[3];               // Vehicle column
-    const description = row[4];           // Description column
+    const name = row[2];                 // Name column
+    const vehicle = row[3];              // Vehicle column
+    const description = row[4];          // Description column
 
     // Combine the fields you want searchable
     const searchText = `${name} | ${vehicle} | ${description}`;
@@ -1173,14 +1186,15 @@ $(window).on('load', function() {
   // Add the search control
   var searchControl = new L.Control.Search({
     layer: markers,
-    propertyName: 'title', // search in the combined text
-    marker: false,         // don't add extra marker
+    propertyName: 'title', // search Name, Vehicle, Description
+    marker: false,
     moveToLocation: (latlng, title, map) => {
-      map.setView(latlng, 10); // zoom when found
+      map.setView(latlng, 10);
     }
   });
 
   map.addControl(searchControl);
 }
 
+  
 });
