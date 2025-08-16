@@ -291,7 +291,20 @@ span.legend-icon {
 }
 
 .leaflet-popup-content {
-  max-height: 200px;  /* limit popup height */
-  overflow-y: auto;   /* make it scroll vertically if too long */
+  max-height: 150px;
+  overflow-y: auto;
+  scrollbar-width: thin;       /* Firefox */
+  scrollbar-color: #888 #eee;  /* Firefox */
 }
 
+/* For Chrome, Edge, Safari */
+.leaflet-popup-content::-webkit-scrollbar {
+  width: 6px;
+}
+.leaflet-popup-content::-webkit-scrollbar-track {
+  background: #eee;
+}
+.leaflet-popup-content::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 3px;
+}
