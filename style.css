@@ -291,8 +291,11 @@ span.legend-icon {
 }
 
 .leaflet-popup-content {
-  max-height: 150px;
+  max-height: 200px;
   overflow-y: auto;
+  overflow-x: hidden;   /* stops sideways scroll */
+  word-wrap: break-word; /* breaks long words/links */
+  white-space: normal;  /* ensures wrapping */
   scrollbar-width: thin;       /* Firefox */
   scrollbar-color: #888 #eee;  /* Firefox */
 }
