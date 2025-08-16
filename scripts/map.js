@@ -1148,5 +1148,39 @@ $(window).on('load', function() {
       }
       return val;
   }
+  // Search function
+  function createMarkers(rows) {
+  var markers = L.markerClusterGroup();
+
+  rows.forEach(row => {
+    const lat = parseFloat(row[0]);      // Latitude column
+    const lng = parseFloat(row[1]);      // Longitude column
+    const name = row[2];                  // Name column
+    const vehicle = row[3];               // Vehicle column
+    const description = row[4];           // Description column
+
+    // Combine the fields you want searchable
+    const searchText = `${name} | ${vehicle} | ${description}`;
+
+    const marker = L.marker([lat, lng], { title: searchText })
+      .bindPopup(`<b>${name}</b><br>Vehicle: ${vehicle}<br>${description}`);
+
+    markers.addLayer(marker);
+  });
+
+  map.addLayer(markers);
+
+  // Add the search control
+  var searchControl = new L.Control.Search({
+    layer: markers,
+    propertyName: 'title', // search in the combined text
+    marker: false,         // don't add extra marker
+    moveToLocation: (latlng, title, map) => {
+      map.setView(latlng, 10); // zoom when found
+    }
+  });
+
+  map.addControl(searchControl);
+}
 
 });
