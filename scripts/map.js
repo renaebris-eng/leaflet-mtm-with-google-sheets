@@ -161,11 +161,10 @@ $(window).on('load', function() {
 
     // if layers.length === 0, add points to map instead of layer
     if (layers === undefined || layers.length === 0) {
-      map.addLayer(
-        clusters
-        ? L.markerClusterGroup().addLayer(group).addTo(map)
-        : group
-      );
+      if (clusters) {
+        var clusterGroup = L.markerClusterGroup();
+        clusterGroup.addLayer(group);
+        map.addLayer(clusterGroup);
     } else {
       if (clusters) {
         // Add multilayer cluster support
