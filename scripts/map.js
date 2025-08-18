@@ -144,9 +144,11 @@ $(window).on('load', function() {
         `;
         var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
            .bindPopup(popupContent);
-          if (layers !== undefined && layers.length !== 1) {
-           marker.addTo(layers[point.Group]);
-        }
+          if (point.Group && layers && layers[point.Group]) {
+           marker.addTo(layers[point.Group]);   
+          } else {
+            marker.addTo(map);  
+          }
 
         markerArray.push(marker);
       }
