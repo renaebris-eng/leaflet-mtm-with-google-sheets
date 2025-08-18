@@ -623,12 +623,29 @@ $(window).on('load', function() {
     document.title = getSetting('_mapTitle');
     addBaseMap();
 
+    // Array to store all markers for search
+    var allMarkers = [];
+
     // Add point markers to the map
     var layers;
     var group = '';
     if (points && points.length > 0) {
       layers = determineLayers(points);
       group = mapPoints(points, layers);
+      if (points && points.length > 0) {
+        layers = determineLayers(points);
+
+        // Wrap mapPoints to capture markers
+        group = mapPoints(points, layers, function(marker, point) {
+          // Attach searchable properties
+           marker.searchData = {
+             Name: point.Name || '',
+             Description: point.Description || '',
+             Vehicle: point.Vehicle || ''
+         };
+         allMarkers.push(marker); // store for search
+      });
+        
     } else {
       completePoints = true;
     }
@@ -650,7 +667,7 @@ $(window).on('load', function() {
       completePolygons = true;
     }
 
-    // Add Nominatim Search control
+    // Add Nominatim  control
     if (getSetting('_mapSearch') !== 'off') {
       var geocoder = L.Control.geocoder({
         expand: 'click',
@@ -675,7 +692,28 @@ $(window).on('load', function() {
       // Update search viewbox coordinates every time the map moves
       map.on('moveend', updateGeocoderBounds);
     }
+      
+      // --- Integrate custom search box (minimal) ---
+      var searchInput = document.getElementById('searchInput'); // your input element
+      if (searchInput) {
+        searchInput.addEventListener('input', function() {
+          var term = this.value.toLowerCase();
 
+          allMarkers.forEach(marker => {
+            var data = marker.searchData;
+            var match = data.Name.toLowerCase().includes(term) ||
+                        data.Description.toLowerCase().includes(term) ||
+                        data.Vehicle.toLowerCase().includes(term);
+      
+            if (match || term === '') {
+              marker.addTo(map);
+            } else {
+              map.removeLayer(marker);
+            }
+        });
+    });
+  }
+}
     // Add location control
     if (getSetting('_mapMyLocation') !== 'off') {
       var locationControl = L.control.locate({
