@@ -124,9 +124,13 @@ $(window).on('load', function() {
           point['Marker Color'].toLowerCase(),
           point['Icon Color']
         );
+    
+      var lat = parseFloat(point.Latitude);
+      var lng = parseFloat(point.Longitude);
 
-      if (point.Latitude !== '' && point.Longitude !== '') {
-        // Convert URLs in Sources to clickable links
+      if (!isNaN(lat) && !isNaN(lng)) {
+
+        // Build popup content
         var sourcesLinks = '';
         if (point['Sources'] && point['Sources'] != '') {
           // Split multiple URLs by space or comma
@@ -142,8 +146,10 @@ $(window).on('load', function() {
           ${point['Description']}<br>
           ${sourcesLinks ? '<br>' + sourcesLinks : ''}
         `;
-        var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
-           .bindPopup(popupContent);
+        // Create marker once
+        var marker = L.marker([lat, lng], { icon: icon }).bindPopup(popupContent);
+
+        // Add marker to group if it exists, otherwise directly to map
           if (point.Group && layers && layers[point.Group]) {
            marker.addTo(layers[point.Group]);   
           } else {
@@ -151,6 +157,9 @@ $(window).on('load', function() {
           }
 
         markerArray.push(marker);
+
+      } else {
+      console.warn("Skipped row due to missing or invalid coordinates:", point);
       }
     }
 
