@@ -1083,8 +1083,8 @@ $(window).on('load', function() {
                     })
 
                   }
-
-                }
+                )
+      
 
                 // Start recursive function
                 fetchPolygonsSheet( polygonSheets )
