@@ -1057,7 +1057,23 @@ $(window).on('load', function() {
                       parse(options),
                       parse(points),
                       parse(polylines)
-                    )
+
+                      parsedPoints = parsedPoints.filter(function(point, index) {
+                        var lat = parseFloat(point.Latitude);
+                        var lng = parseFloat(point.Longitude);
+
+                        if (isNaN(lat) || isNaN(lng)) {
+                          console.warn("Skipped row " + (index + 1) + " due to missing or invalid coordinates:", point);
+                          return false; // skip this row
+                        }
+                      return true; // keep this row
+                    });
+                    onMapDataLoad(
+                      parsedOptions,
+                      parsedPoints,
+                      parsedPolylines
+                    );
+                    
                   } else {
                     
                     // Fetch another polygons sheet
