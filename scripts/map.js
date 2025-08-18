@@ -84,7 +84,7 @@ $(window).on('load', function() {
 
     // if none of the points have named layers, return no layers
     if (groups.length === 0) {
-      layers = undefined;
+      layers = {};
     } else {
       for (var i in groups) {
         var name = groups[i];
