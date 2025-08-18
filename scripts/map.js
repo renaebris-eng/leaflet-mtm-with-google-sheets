@@ -144,9 +144,6 @@ $(window).on('load', function() {
         `;
         var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
             .bindPopup(popupContent);
-        
-        // Add marker to search array
-        if (allMarkers) allMarkers.push(marker);
 
         // Add to layers or map
         if (point.Group && layers && layers[point.Group]) {
@@ -180,9 +177,6 @@ $(window).on('load', function() {
           layers[i].addTo(map);
         }
       }
-      // Return the feature group
-      return group;
-    }
 
       var pos = (getSetting('_pointsLegendPos') == 'off')
         ? 'topleft'
@@ -626,8 +620,6 @@ $(window).on('load', function() {
    */
   function onMapDataLoad(options, points, polylines) {
 
-    var allMarkers = []; // this will store all markers for search
-
     createDocumentSettings(options);
 
     document.title = getSetting('_mapTitle');
@@ -658,21 +650,6 @@ $(window).on('load', function() {
       loadAllGeojsons(0);
     } else {
       completePolygons = true;
-    }
-
-    // --- Search control ---
-    if (allMarkers.length > 0) {
-      var searchControl = new L.Control.Search({
-        layer: L.featureGroup(allMarkers),
-        propertyName: 'Name',
-        marker: false,
-        moveToLocation: function(latlng, title, map) {
-          map.setView(latlng, 15);
-          var foundMarker = allMarkers.find(m => m.getPopup().getContent().includes(title));
-          if (foundMarker) foundMarker.openPopup();
-         }
-      });
-      searchControl.addTo(map);
     }
 
     // Add Nominatim  control
