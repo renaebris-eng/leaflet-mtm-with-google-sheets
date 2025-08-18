@@ -124,6 +124,11 @@ $(window).on('load', function() {
           point['Marker Color'].toLowerCase(),
           point['Icon Color']
         );
+      // Skip completely empty rows
+      if (!point || Object.values(point).every(v => v === '' || v === null || v === undefined)) {
+        console.warn("Skipped completely empty row:", i);
+        continue;
+      }
     
       var lat = parseFloat(point.Latitude);
       var lng = parseFloat(point.Longitude);
