@@ -1053,12 +1053,11 @@ $(window).on('load', function() {
 
                   // Load map once all polygon sheets have been loaded (if any)
                   if (polygonSheets.length === 0) {
-                    onMapDataLoad(
-                      parse(options),
-                      parse(points),
-                      parse(polylines)
-
-                      parsedPoints = parsedPoints.filter(function(point, index) {
+                    var parsedOptions = parse(options);
+                    var parsedPoints = parse(points);
+                    var parsedPolylines = parse(polylines);
+                                          
+                    parsedPoints = parsedPoints.filter(function(point, index) {
                         var lat = parseFloat(point.Latitude);
                         var lng = parseFloat(point.Longitude);
 
@@ -1068,23 +1067,23 @@ $(window).on('load', function() {
                         }
                       return true; // keep this row
                     });
-                    onMapDataLoad(
-                      parsedOptions,
-                      parsedPoints,
-                      parsedPolylines
-                    );
                     
+                    onMapDataLoad(
+                      parse(options),
+                      parse(points),
+                      parse(polylines)
+                   );
+
                   } else {
                     
                     // Fetch another polygons sheet
                     $.getJSON(apiUrl + spreadsheetId + '/values/' + polygonSheets.shift() + '?key=' + googleApiKey, function(data) {
                       createPolygonSettings( parse([data]) )
                       fetchPolygonsSheet(polygonSheets)
-                    })
+                    });
 
                   }
-                )
-      
+               };
 
                 // Start recursive function
                 fetchPolygonsSheet( polygonSheets )
