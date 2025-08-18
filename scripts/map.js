@@ -16,7 +16,7 @@ $(window).on('load', function() {
     return L.AwesomeMarkers.icon({
       icon: icon,
       prefix: prefix,
-      markerColor: markerColor || "teal",
+      markerColor: markerColor || "cadetblue",
       iconColor: iconColor
     });
   }
