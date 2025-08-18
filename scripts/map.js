@@ -79,6 +79,12 @@ $(window).on('load', function() {
         group2color[ group ] = points[i]['Marker Icon'].indexOf('.') > 0
           ? points[i]['Marker Icon']
           : points[i]['Marker Color'];
+
+        var groupName = point['Group'];
+        if (groupName && layers[groupName]) {
+           layers[groupName].addLayer(marker);
+        } else {
+           marker.addTo(map);  // no group → show directly
       }
     }
 
