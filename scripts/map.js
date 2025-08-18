@@ -16,7 +16,7 @@ $(window).on('load', function() {
     return L.AwesomeMarkers.icon({
       icon: icon,
       prefix: prefix,
-      markerColor: markerColor || "cadetblue",
+      markerColor: markerColor || "teal",
       iconColor: iconColor
     });
   }
@@ -124,7 +124,7 @@ $(window).on('load', function() {
           point['Marker Color'].toLowerCase(),
           point['Icon Color']
         );
-      
+
       if (point.Latitude !== '' && point.Longitude !== '') {
         // Convert URLs in Sources to clickable links
         var sourcesLinks = '';
@@ -143,13 +143,9 @@ $(window).on('load', function() {
           ${sourcesLinks ? '<br>' + sourcesLinks : ''}
         `;
         var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
-            .bindPopup(popupContent);
-
-        // Add to layers or map
-        if (point.Group && layers && layers[point.Group]) {
-            marker.addTo(layers[point.Group]);   
-        } else {
-            marker.addTo(map);  
+           .bindPopup(popupContent);
+          if (layers !== undefined && layers.length !== 1) {
+           marker.addTo(layers[point.Group]);
         }
 
         markerArray.push(marker);
@@ -161,10 +157,11 @@ $(window).on('load', function() {
 
     // if layers.length === 0, add points to map instead of layer
     if (layers === undefined || layers.length === 0) {
-      if (clusters) {
-        var clusterGroup = L.markerClusterGroup();
-        clusterGroup.addLayer(group);
-        map.addLayer(clusterGroup);
+      map.addLayer(
+        clusters
+        ? L.markerClusterGroup().addLayer(group).addTo(map)
+        : group
+      );
     } else {
       if (clusters) {
         // Add multilayer cluster support
@@ -651,7 +648,7 @@ $(window).on('load', function() {
       completePolygons = true;
     }
 
-    // Add Nominatim  control
+    // Add Nominatim Search control
     if (getSetting('_mapSearch') !== 'off') {
       var geocoder = L.Control.geocoder({
         expand: 'click',
@@ -676,7 +673,7 @@ $(window).on('load', function() {
       // Update search viewbox coordinates every time the map moves
       map.on('moveend', updateGeocoderBounds);
     }
-      
+
     // Add location control
     if (getSetting('_mapMyLocation') !== 'off') {
       var locationControl = L.control.locate({
@@ -1054,37 +1051,22 @@ $(window).on('load', function() {
 
                   // Load map once all polygon sheets have been loaded (if any)
                   if (polygonSheets.length === 0) {
-                    var parsedOptions = parse(options);
-                    var parsedPoints = parse(points);
-                    var parsedPolylines = parse(polylines);
-                                          
-                    parsedPoints = parsedPoints.filter(function(point, index) {
-                        var lat = parseFloat(point.Latitude);
-                        var lng = parseFloat(point.Longitude);
-
-                        if (isNaN(lat) || isNaN(lng)) {
-                          console.warn("Skipped row " + (index + 1) + " due to missing or invalid coordinates:", point);
-                          return false; // skip this row
-                        }
-                      return true; // keep this row
-                    });
-                    
                     onMapDataLoad(
                       parse(options),
                       parse(points),
                       parse(polylines)
-                   );
-
+                    )
                   } else {
                     
                     // Fetch another polygons sheet
                     $.getJSON(apiUrl + spreadsheetId + '/values/' + polygonSheets.shift() + '?key=' + googleApiKey, function(data) {
                       createPolygonSettings( parse([data]) )
                       fetchPolygonsSheet(polygonSheets)
-                    });
+                    })
 
                   }
-               };
+
+                }
 
                 // Start recursive function
                 fetchPolygonsSheet( polygonSheets )
