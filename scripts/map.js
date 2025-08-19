@@ -142,10 +142,8 @@ $(window).on('load', function() {
           ${point['Description']}<br>
           ${sourcesLinks ? '<br>' + sourcesLinks : ''}
         `;
-        if (point.Latitude && point.Longitude) {
           var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
            .bindPopup(popupContent);
-          
           if (layers !== undefined && layers.length !== 1) {
            marker.addTo(layers[point.Group]);
         }
