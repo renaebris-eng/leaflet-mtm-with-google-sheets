@@ -98,192 +98,234 @@ $(window).on('load', function() {
   /**
    * Assigns points to appropriate layers and clusters them if needed
    */
-  function mapPoints(points, layers) {
-    var markerArray = [];
-    // check that map has loaded before adding points to it?
-    for (var i = 0; i < points.length; i++) {
-      var point = points[i];
+function mapPoints(points, layers) {
+  var markerArray = [];
 
-      // Convert coordinates safely
-      var lat = parseFloat(point.Latitude);
-      var lon = parseFloat(point.Longitude);
+  for (var i in points) {
+    var point = points[i];
 
-      // Skip if either latitude or longitude is missing/invalid
-      if (!isFinite(lat) || !isFinite(lon)) {
-        continue;
+    // --- Skip completely empty rows (all fields blank/undefined) ---
+    if (!point) continue;
+    var isBlankRow = true;
+    for (var k in point) {
+      if (point[k] !== null && point[k] !== undefined && String(point[k]).trim() !== '') {
+        isBlankRow = false;
+        break;
       }
+    }
+    if (isBlankRow) {
+      console.warn('Skipped blank row:', point);
+      continue;
+    }
 
-      // If icon contains '.', assume it's a path to a custom icon,
-      // otherwise create a Font Awesome icon
-      var iconSize = point['Custom Size'];
-      var size = (iconSize.indexOf('x') > 0)
-        ? [parseInt(iconSize.split('x')[0]), parseInt(iconSize.split('x')[1])]
-        : [32, 32];
+    // --- Validate coordinates early and skip if missing/invalid ---
+    var lat = parseFloat(point.Latitude);
+    var lng = parseFloat(point.Longitude);
+    var hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
+    if (!hasValidCoords) {
+      console.warn('Skipped row due to missing/invalid coordinates:', point);
+      continue;
+    }
 
-      var anchor = [size[0] / 2, size[1]];
+    // --- Safe reads with defaults (avoid calling methods on undefined) ---
+    var iconSizeStr   = (point['Custom Size'] || '').toString();
+    var markerIconStr = (point['Marker Icon'] || '').toString();
+    var markerColor   = (point['Marker Color'] || '').toString();
+    var iconColor     = (point['Icon Color'] || '').toString();
 
-      var icon = (point['Marker Icon'].indexOf('.') > 0)
-        ? L.icon({
-          iconUrl: point['Marker Icon'],
+    // Optional: default marker color when empty (teal)
+    if (!markerColor) markerColor = 'teal';
+
+    // Compute icon size
+    var size = (iconSizeStr.indexOf('x') > 0)
+      ? [parseInt(iconSizeStr.split('x')[0], 10) || 32, parseInt(iconSizeStr.split('x')[1], 10) || 32]
+      : [32, 32];
+    var anchor = [size[0] / 2, size[1]];
+
+    // Build the icon (custom URL vs AwesomeMarkers)
+    var icon = (markerIconStr.indexOf('.') > 0)
+      ? L.icon({
+          iconUrl: markerIconStr,
           iconSize: size,
           iconAnchor: anchor
         })
-        : createMarkerIcon(point['Marker Icon'],
+      : createMarkerIcon(
+          markerIconStr || 'map-marker', // fallback FA icon name
           'fa',
-          point['Marker Color'].toLowerCase(),
-          point['Icon Color']
+          markerColor.toLowerCase(),
+          iconColor || 'white'
         );
 
-      if (point.Latitude !== '' && point.Longitude !== '') {
-        // Convert URLs in Sources to clickable links
-        var sourcesLinks = '';
-        if (point['Sources'] && point['Sources'] != '') {
-          // Split multiple URLs by space or comma
-          var urls = point['Sources'].split(/[\s,]+/);
-          urls.forEach(function(url) {
-            sourcesLinks += `<a href="${url}" target="_blank">${url}</a><br>`;
-          });
-        }
-        var popupContent = `
-          <b>${point['Name']}</b><br>
-          ${point['Image'] ? ('<img src="' + point['Image'] + '"><br>') : ''}
-          <b>Vehicle:</b> ${point['Vehicle']}<br>
-          ${point['Description']}<br>
-          ${sourcesLinks ? '<br>' + sourcesLinks : ''}
-        `;
-          var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
-           .bindPopup(popupContent);
-          if (layers !== undefined && layers.length !== 1) {
-           marker.addTo(layers[point.Group]);
-        }
-
-        markerArray.push(marker);
-      }
+    // Convert URLs in Sources to clickable links
+    var sourcesLinks = '';
+    if (point['Sources'] && point['Sources'] !== '') {
+      var urls = String(point['Sources']).split(/[\s,]+/);
+      urls.forEach(function(url) {
+        if (!url) return;
+        sourcesLinks += `<a href="${url}" target="_blank">${url}</a><br>`;
+      });
     }
 
-    var group = L.featureGroup(markerArray);
-    var clusters = (getSetting('_markercluster') === 'on') ? true : false;
+    // Popup content with safe fallbacks
+    var popupContent = `
+      <b>${point['Name'] || ''}</b><br>
+      ${point['Image'] ? ('<img src="' + point['Image'] + '"><br>') : ''}
+      <b>Vehicle:</b> ${point['Vehicle'] || ''}<br>
+      ${point['Description'] || ''}<br>
+      ${sourcesLinks ? '<br>' + sourcesLinks : ''}
+    `;
 
-    // if layers.length === 0, add points to map instead of layer
-    if (layers === undefined || layers.length === 0) {
-      map.addLayer(
-        clusters
-        ? L.markerClusterGroup().addLayer(group).addTo(map)
-        : group
-      );
+    // Create the marker with validated coords
+    var marker = L.marker([lat, lng], { icon: icon }).bindPopup(popupContent);
+
+    // Add to appropriate layer or directly to map
+    if (point.Group && layers && layers[point.Group]) {
+      marker.addTo(layers[point.Group]);
     } else {
-      if (clusters) {
-        // Add multilayer cluster support
-        multilayerClusterSupport = L.markerClusterGroup.layerSupport();
-        multilayerClusterSupport.addTo(map);
-
-        for (i in layers) {
-          multilayerClusterSupport.checkIn(layers[i]);
-          layers[i].addTo(map);
-        }
-      }
-
-      var pos = (getSetting('_pointsLegendPos') == 'off')
-        ? 'topleft'
-        : getSetting('_pointsLegendPos');
-
-      var pointsLegend = L.control.layers(null, layers, {
-        collapsed: false,
-        position: pos,
-      });
-
-      if (getSetting('_pointsLegendPos') !== 'off') {
-        pointsLegend.addTo(map);
-        pointsLegend._container.id = 'points-legend';
-        pointsLegend._container.className += ' ladder';
-      }
+      marker.addTo(map);
     }
 
-    $('#points-legend').prepend('<h6 class="pointer">' + getSetting('_pointsLegendTitle') + '</h6>');
-    if (getSetting('_pointsLegendIcon') != '') {
-      $('#points-legend h6').prepend('<span class="legend-icon"><i class="fas '
-        + getSetting('_pointsLegendIcon') + '"></i></span>');
-    }
-
-    var displayTable = getSetting('_displayTable') == 'on' ? true : false;
-
-    // Display table with active points if specified
-    var columns = getSetting('_tableColumns').split(',')
-                  .map(Function.prototype.call, String.prototype.trim);
-
-    if (displayTable && columns.length > 1) {
-      tableHeight = trySetting('_tableHeight', 40);
-      if (tableHeight < 10 || tableHeight > 90) {tableHeight = 40;}
-      $('#map').css('height', (100 - tableHeight) + 'vh');
-      map.invalidateSize();
-
-      // Set background (and text) color of the table header
-      var colors = getSetting('_tableHeaderColor').split(',');
-      if (colors[0] != '') {
-        $('table.display').css('background-color', colors[0]);
-        if (colors.length >= 2) {
-          $('table.display').css('color', colors[1]);
-        }
-      }
-
-      // Update table every time the map is moved/zoomed or point layers are toggled
-      map.on('moveend', updateTable);
-      map.on('layeradd', updateTable);
-      map.on('layerremove', updateTable);
-
-      // Clear table data and add only visible markers to it
-      function updateTable() {
-        var pointsVisible = [];
-        for (i in points) {
-          if (map.hasLayer(layers[points[i].Group]) &&
-              map.getBounds().contains(L.latLng(points[i].Latitude, points[i].Longitude))) {
-            pointsVisible.push(points[i]);
-          }
-        }
-
-        tableData = pointsToTableData(pointsVisible);
-
-        table.clear();
-        table.rows.add(tableData);
-        table.draw();
-      }
-
-      // Convert Leaflet marker objects into DataTable array
-      function pointsToTableData(ms) {
-        var data = [];
-        for (i in ms) {
-          var a = [];
-          for (j in columns) {
-            a.push(ms[i][columns[j]]);
-          }
-          data.push(a);
-        }
-        return data;
-      }
-
-      // Transform columns array into array of title objects
-      function generateColumnsArray() {
-        var c = [];
-        for (i in columns) {
-          c.push({title: columns[i]});
-        }
-        return c;
-      }
-
-      // Initialize DataTable
-      var table = $('#maptable').DataTable({
-        paging: false,
-        scrollCollapse: true,
-        scrollY: 'calc(' + tableHeight + 'vh - 40px)',
-        info: false,
-        searching: false,
-        columns: generateColumnsArray(),
-      });
-    }
-
-    completePoints = true;
-    return group;
+    markerArray.push(marker);
   }
+
+  var group = L.featureGroup(markerArray);
+  var clusters = (getSetting('_markercluster') === 'on') ? true : false;
+
+  // If no layer groups exist, add the feature group (possibly clustered) to the map
+  if (layers === undefined || layers.length === 0) {
+    if (clusters) {
+      var clusterGroup = L.markerClusterGroup();
+      clusterGroup.addLayer(group);
+      map.addLayer(clusterGroup);
+    } else {
+      map.addLayer(group);
+    }
+  } else {
+    if (clusters) {
+      // Multilayer cluster support
+      multilayerClusterSupport = L.markerClusterGroup.layerSupport();
+      multilayerClusterSupport.addTo(map);
+
+      for (var lname in layers) {
+        if (!layers.hasOwnProperty(lname)) continue;
+        multilayerClusterSupport.checkIn(layers[lname]);
+        layers[lname].addTo(map);
+      }
+    }
+
+    var pos = (getSetting('_pointsLegendPos') == 'off')
+      ? 'topleft'
+      : getSetting('_pointsLegendPos');
+
+    var pointsLegend = L.control.layers(null, layers, {
+      collapsed: false,
+      position: pos,
+    });
+
+    if (getSetting('_pointsLegendPos') !== 'off') {
+      pointsLegend.addTo(map);
+      pointsLegend._container.id = 'points-legend';
+      pointsLegend._container.className += ' ladder';
+    }
+  }
+
+  $('#points-legend').prepend('<h6 class="pointer">' + getSetting('_pointsLegendTitle') + '</h6>');
+  if (getSetting('_pointsLegendIcon') != '') {
+    $('#points-legend h6').prepend('<span class="legend-icon"><i class="fas '
+      + getSetting('_pointsLegendIcon') + '"></i></span>');
+  }
+
+  var displayTable = getSetting('_displayTable') == 'on' ? true : false;
+  var columns = getSetting('_tableColumns').split(',')
+                .map(Function.prototype.call, String.prototype.trim);
+
+  if (displayTable && columns.length > 1) {
+    tableHeight = trySetting('_tableHeight', 40);
+    if (tableHeight < 10 || tableHeight > 90) {tableHeight = 40;}
+    $('#map').css('height', (100 - tableHeight) + 'vh');
+    map.invalidateSize();
+
+    // Header colors
+    var colors = getSetting('_tableHeaderColor').split(',');
+    if (colors[0] != '') {
+      $('table.display').css('background-color', colors[0]);
+      if (colors.length >= 2) {
+        $('table.display').css('color', colors[1]);
+      }
+    }
+
+    // Update table on map changes
+    map.on('moveend', updateTable);
+    map.on('layeradd', updateTable);
+    map.on('layerremove', updateTable);
+
+    function updateTable() {
+      var pointsVisible = [];
+      for (var i2 in points) {
+        if (!points.hasOwnProperty(i2)) continue;
+        var p2 = points[i2];
+        if (!p2) continue;
+        var lat2 = parseFloat(p2.Latitude);
+        var lng2 = parseFloat(p2.Longitude);
+        if (!Number.isFinite(lat2) || !Number.isFinite(lng2)) continue;
+        if (p2.Group && layers && layers[p2.Group]) {
+          if (map.hasLayer(layers[p2.Group]) &&
+              map.getBounds().contains(L.latLng(lat2, lng2))) {
+            pointsVisible.push(p2);
+          }
+        } else {
+          if (map.getBounds().contains(L.latLng(lat2, lng2))) {
+            pointsVisible.push(p2);
+          }
+        }
+      }
+
+      tableData = pointsToTableData(pointsVisible);
+
+      table.clear();
+      table.rows.add(tableData);
+      table.draw();
+    }
+
+    // Convert Leaflet marker objects into DataTable array
+    function pointsToTableData(ms) {
+      var data = [];
+      for (var i3 in ms) {
+        if (!ms.hasOwnProperty(i3)) continue;
+        var a = [];
+        for (var j3 in columns) {
+          if (!columns.hasOwnProperty(j3)) continue;
+          a.push(ms[i3][columns[j3]]);
+        }
+        data.push(a);
+      }
+      return data;
+    }
+
+    // Transform columns array into array of title objects
+    function generateColumnsArray() {
+      var c = [];
+      for (var k3 in columns) {
+        if (!columns.hasOwnProperty(k3)) continue;
+        c.push({title: columns[k3]});
+      }
+      return c;
+    }
+
+    // Initialize DataTable
+    var table = $('#maptable').DataTable({
+      paging: false,
+      scrollCollapse: true,
+      scrollY: 'calc(' + tableHeight + 'vh - 40px)',
+      info: false,
+      searching: false,
+      columns: generateColumnsArray(),
+    });
+  }
+
+  completePoints = true;
+  // no return needed; original flow adds to map here
+}
 
   var polygon = 0; // current active polygon
   var layer = 0; // number representing current layer among layers in legend
