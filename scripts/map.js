@@ -101,8 +101,17 @@ $(window).on('load', function() {
   function mapPoints(points, layers) {
     var markerArray = [];
     // check that map has loaded before adding points to it?
-    for (var i in points) {
+    for (var i = 0; i < points.length; i++) {
       var point = points[i];
+
+      // Convert coordinates safely
+      var lat = parseFloat(point.Latitude);
+      var lon = parseFloat(point.Longitude);
+
+      // Skip if either latitude or longitude is missing/invalid
+      if (!isFinite(lat) || !isFinite(lon)) {
+        continue;
+      }
 
       // If icon contains '.', assume it's a path to a custom icon,
       // otherwise create a Font Awesome icon
