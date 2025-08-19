@@ -182,9 +182,13 @@ function mapPoints(points, layers) {
     if (point.Group && layers && layers[point.Group]) {
       marker.addTo(layers[point.Group]);
     } else {
-      marker.addTo(map);
+      // No group → put marker directly on the map or cluster
+      if (clusters) {
+        clusterGroup.addLayer(marker);
+      } else {
+        marker.addTo(map);
+      }
     }
-
     markerArray.push(marker);
   }
 
