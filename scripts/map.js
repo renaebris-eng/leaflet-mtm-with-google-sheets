@@ -1204,5 +1204,7 @@ function mapPoints(points, layers) {
       return val;
   }
 
+  // Enable scroll wheel zoom
+  map.scrollWheelZoom.enable();
   
 });
