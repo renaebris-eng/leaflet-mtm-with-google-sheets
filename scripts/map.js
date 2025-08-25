@@ -198,7 +198,9 @@ function mapPoints(points, layers) {
   // If no layer groups exist, add the feature group (possibly clustered) to the map
   if (layers === undefined || layers.length === 0) {
     if (clusters) {
-      var clusterGroup = L.markerClusterGroup();
+      var clusterGroup = L.markerClusterGroup({
+        maxClusterRadius: 0
+      });
       clusterGroup.addLayer(group);
       map.addLayer(clusterGroup);
     } else {
@@ -207,7 +209,9 @@ function mapPoints(points, layers) {
   } else {
     if (clusters) {
       // Multilayer cluster support
-      multilayerClusterSupport = L.markerClusterGroup.layerSupport();
+      multilayerClusterSupport = L.markerClusterGroup.layerSupport({
+        maxClusterRadius: 0
+      });
       multilayerClusterSupport.addTo(map);
 
       for (var lname in layers) {
@@ -216,6 +220,7 @@ function mapPoints(points, layers) {
         layers[lname].addTo(map);
       }
     }
+  }
 
     var pos = (getSetting('_pointsLegendPos') == 'off')
       ? 'topleft'
