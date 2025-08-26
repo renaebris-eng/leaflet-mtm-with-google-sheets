@@ -199,7 +199,7 @@ function mapPoints(points, layers) {
   if (layers === undefined || layers.length === 0) {
     if (clusters) {
       var clusterGroup = L.markerClusterGroup({
-        maxClusterRadius: 30  // smaller number = less clustering
+        maxClusterRadius: 70  // smaller number = less clustering
       });
       clusterGroup.addLayer(group);
       map.addLayer(clusterGroup);
