@@ -198,7 +198,9 @@ function mapPoints(points, layers) {
   // If no layer groups exist, add the feature group (possibly clustered) to the map
   if (layers === undefined || layers.length === 0) {
     if (clusters) {
-      var clusterGroup = L.markerClusterGroup();
+      var clusterGroup = L.markerClusterGroup({
+        maxClusterRadius: 30  // smaller number = less clustering
+      });
       clusterGroup.addLayer(group);
       map.addLayer(clusterGroup);
     } else {
@@ -216,6 +218,7 @@ function mapPoints(points, layers) {
         layers[lname].addTo(map);
       }
     }
+  }
 
     var pos = (getSetting('_pointsLegendPos') == 'off')
       ? 'topleft'
