@@ -218,7 +218,6 @@ function mapPoints(points, layers) {
         layers[lname].addTo(map);
       }
     }
-  }
 
     var pos = (getSetting('_pointsLegendPos') == 'off')
       ? 'topleft'
