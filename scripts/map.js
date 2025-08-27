@@ -174,8 +174,7 @@ function mapPoints(points, layers) {
       ${point['Description'] || ''}<br>
       ${sourcesLinks ? '<br>' + sourcesLinks : ''}
     `;
-
-    // Create the marker with validated coords
+// Create the marker with validated coords
 var marker = L.marker([lat, lng], { 
   icon: icon,
   Name: point.Name,
@@ -189,24 +188,18 @@ marker.searchData =
   (point.Vehicle || '') + ' ' +
   (point.Description || '');
 
-    // Add to appropriate layer or directly to map
-    if (point.Group && layers && layers[point.Group]) {
-      marker.addTo(layers[point.Group]);
-    } else {
-      // No group → put marker directly on the map or cluster
-      if (clusters) {
-        clusterGroup.addLayer(marker);
-      } else {
-        marker.addTo(map);
-      }
-    }
-    markerArray.push(marker);
+// Add to appropriate layer or directly to map
+if (point.Group && layers && layers[point.Group]) {
+  marker.addTo(layers[point.Group]);
+} else {
+  if (clusters) {
+    clusterGroup.addLayer(marker);
+  } else {
+    marker.addTo(map);
   }
-
-  // --- Add search data to each marker (Name only for now) ---
-markerArray.forEach(function(marker) {
-  marker.searchData = marker.options.Name || '';
-});
+}
+markerArray.push(marker);
+}
 
 // --- Combine all markers into a single feature group for search ---
 var allMarkers = L.featureGroup(markerArray);
@@ -214,15 +207,14 @@ var allMarkers = L.featureGroup(markerArray);
 // --- Add Leaflet Search control ---
 var searchControl = new L.Control.Search({
   layer: allMarkers,
-  propertyName: 'searchData',   // we just added this property
+  propertyName: 'searchData',   // now includes Name + Vehicle + Description
   initial: false,
   zoom: 16,
   marker: false,
-  textPlaceholder: 'Search by Name...'
+  textPlaceholder: 'Search by Name, Vehicle, or Description...'
 });
 
 map.addControl(searchControl);
-
 
   var group = L.featureGroup(markerArray);
   var clusters = (getSetting('_markercluster') === 'on') ? true : false;
