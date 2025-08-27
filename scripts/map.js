@@ -188,10 +188,7 @@ marker.searchData =
   (point.Vehicle || '') + ' ' +
   (point.Description || '');
 
-// Attach searchData to marker object (optional)
-marker.searchData = searchData;
-
-// --- THIS IS THE IMPORTANT PART ---
+// Ensure the marker has a feature object for Leaflet Search
 if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
 marker.feature.properties.searchData = searchData;
 
