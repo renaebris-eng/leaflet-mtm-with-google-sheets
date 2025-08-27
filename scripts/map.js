@@ -1175,18 +1175,18 @@ function mapPoints(points, layers) {
        }
    });
 
-// --- Add searchData to all markers on the map ---
+// --- Add searchData into marker options ---
 map.eachLayer(function(layer) {
   if (layer instanceof L.Marker) {
-    layer.searchData = (layer.options.Name || '') + ' ' +
-                       (layer.options.Vehicle || '') + ' ' +
-                       (layer.options.Description || '');
+    layer.options.searchData = (layer.options.Name || '') + ' ' +
+                               (layer.options.Vehicle || '') + ' ' +
+                               (layer.options.Description || '');
   } else if (layer instanceof L.LayerGroup) {
     layer.eachLayer(function(subLayer){
       if (subLayer instanceof L.Marker) {
-        subLayer.searchData = (subLayer.options.Name || '') + ' ' +
-                              (subLayer.options.Vehicle || '') + ' ' +
-                              (subLayer.options.Description || '');
+        subLayer.options.searchData = (subLayer.options.Name || '') + ' ' +
+                                      (subLayer.options.Vehicle || '') + ' ' +
+                                      (subLayer.options.Description || '');
       }
     });
   }
@@ -1210,7 +1210,7 @@ map.eachLayer(function(layer) {
 // --- Add Leaflet Search control ---
 var searchControl = new L.Control.Search({
   layer: allMarkers,
-  propertyName: 'searchData',
+  propertyName: 'searchData',  // now this matches marker.options.searchData
   initial: false,
   zoom: 16,
   marker: false
