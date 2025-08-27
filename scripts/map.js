@@ -222,8 +222,8 @@ var searchControl = new L.Control.Search({
 
 moveToLocation: function(latlng, title, map) {
   var marker = this._layer; // 'this._layer' is the marker that matched
-  if (markerClusterGroup) {
-    markerClusterGroup.zoomToShowLayer(marker, function() {
+  if (clusterGroup) {
+    clusterGroup.zoomToShowLayer(marker, function() {
       marker.openPopup();
     });
   } else {
