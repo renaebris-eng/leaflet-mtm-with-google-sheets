@@ -1175,6 +1175,49 @@ function mapPoints(points, layers) {
        }
    });
 
+// --- Add searchData to all markers on the map ---
+map.eachLayer(function(layer) {
+  if (layer instanceof L.Marker) {
+    layer.searchData = (layer.options.Name || '') + ' ' +
+                       (layer.options.Vehicle || '') + ' ' +
+                       (layer.options.Description || '');
+  } else if (layer instanceof L.LayerGroup) {
+    layer.eachLayer(function(subLayer){
+      if (subLayer instanceof L.Marker) {
+        subLayer.searchData = (subLayer.options.Name || '') + ' ' +
+                              (subLayer.options.Vehicle || '') + ' ' +
+                              (subLayer.options.Description || '');
+      }
+    });
+  }
+});
+
+// --- Combine all markers into one layer group for search ---
+var allMarkers = L.layerGroup();
+
+map.eachLayer(function(layer) {
+  if (layer instanceof L.Marker) {
+    allMarkers.addLayer(layer);
+  } else if (layer instanceof L.LayerGroup) {
+    layer.eachLayer(function(subLayer){
+      if (subLayer instanceof L.Marker) {
+        allMarkers.addLayer(subLayer);
+      }
+    });
+  }
+});
+
+// --- Add Leaflet Search control ---
+var searchControl = new L.Control.Search({
+  layer: allMarkers,
+  propertyName: 'searchData',
+  initial: false,
+  zoom: 16,
+  marker: false
+});
+
+map.addControl(searchControl);
+
   /**
    * Reformulates documentSettings as a dictionary, e.g.
    * {"webpageTitle": "Leaflet Boilerplate", "infoPopupText": "Stuff"}
