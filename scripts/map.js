@@ -188,6 +188,13 @@ marker.searchData =
   (point.Vehicle || '') + ' ' +
   (point.Description || '');
 
+// Attach searchData to marker object (optional)
+marker.searchData = searchData;
+
+// --- THIS IS THE IMPORTANT PART ---
+if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
+marker.feature.properties.searchData = searchData;
+
 // 🔍 Debug log to check what’s inside each marker
 console.log("Marker created:", marker.options, "searchData:", marker.searchData);
 
