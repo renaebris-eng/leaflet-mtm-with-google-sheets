@@ -188,6 +188,9 @@ marker.searchData =
   (point.Vehicle || '') + ' ' +
   (point.Description || '');
 
+// 🔍 Debug log to check what’s inside each marker
+console.log("Marker created:", marker.options, "searchData:", marker.searchData);
+
 // Add to appropriate layer or directly to map
 if (point.Group && layers && layers[point.Group]) {
   marker.addTo(layers[point.Group]);
