@@ -190,7 +190,7 @@ marker.searchData =
 
 // Ensure the marker has a feature object for Leaflet Search
 if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
-marker.feature.properties.searchData = searchData;
+marker.feature.properties.searchData = marker.searchData;
 
 // 🔍 Debug log to check what’s inside each marker
 console.log("Marker created:", marker.options, "searchData:", marker.searchData);
