@@ -176,7 +176,18 @@ function mapPoints(points, layers) {
     `;
 
     // Create the marker with validated coords
-    var marker = L.marker([lat, lng], { icon: icon }).bindPopup(popupContent);
+var marker = L.marker([lat, lng], { 
+  icon: icon,
+  Name: point.Name,
+  Vehicle: point.Vehicle,
+  Description: point.Description
+}).bindPopup(popupContent);
+
+// Add a combined search string
+marker.searchData = 
+  (point.Name || '') + ' ' +
+  (point.Vehicle || '') + ' ' +
+  (point.Description || '');
 
     // Add to appropriate layer or directly to map
     if (point.Group && layers && layers[point.Group]) {
