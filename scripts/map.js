@@ -221,9 +221,15 @@ var searchControl = new L.Control.Search({
   textPlaceholder: 'Search by Name, Vehicle, or Description...',
 
 moveToLocation: function(latlng, title, map) {
-  var marker = this._layer; // 'this._layer' is the marker that matched
-  if (clusterGroup) {
-    clusterGroup.zoomToShowLayer(marker, function() {
+  // Find the marker that matches the search result
+  var marker = allMarkers.getLayers().find(function(m) {
+    return m.searchData && m.searchData.includes(title);
+  });
+
+  if (!marker) return; // safety check
+
+  if (markerClusterGroup) {
+    markerClusterGroup.zoomToShowLayer(marker, function() {
       marker.openPopup();
     });
   } else {
