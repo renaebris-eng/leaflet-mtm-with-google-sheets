@@ -218,7 +218,23 @@ var searchControl = new L.Control.Search({
   initial: false,
   zoom: 16,
   marker: false,
-  textPlaceholder: 'Search by Name, Vehicle, or Description...'
+  textPlaceholder: 'Search by Name, Vehicle, or Description...',
+
+  // ✅ Custom function to handle found locations
+  moveToLocation: function(latlng, title, map) {
+    map.setView(latlng, 16);  // zooms to the marker location
+    // If using clusters, open the cluster containing this marker
+    if (markerClusterGroup) {
+      var marker = allMarkers.getLayers().find(m => m.getLatLng().equals(latlng));
+      if (marker) markerClusterGroup.zoomToShowLayer(marker, function() {
+        marker.openPopup();
+      });
+    } else {
+      // Just open the popup if not clustered
+      var marker = allMarkers.getLayers().find(m => m.getLatLng().equals(latlng));
+      if (marker) marker.openPopup();
+    }
+  }
 });
 
 map.addControl(searchControl);
