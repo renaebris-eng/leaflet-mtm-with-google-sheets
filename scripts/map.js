@@ -182,30 +182,52 @@ var marker = L.marker([lat, lng], {
   Description: point.Description
 }).bindPopup(popupContent);
 
-// Add a combined search string
-marker.searchData = 
-  (point.Name || '') + ' ' +
-  (point.Vehicle || '') + ' ' +
-  (point.Description || '');
+// --- Decide if we are clustering ---
+var clusters = (getSetting('_markercluster') === 'on') ? true : false;
 
-// Ensure the marker has a feature object for Leaflet Search
-if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
-marker.feature.properties.searchData = marker.searchData;
-
-// 🔍 Debug log to check what’s inside each marker
-console.log("Marker created:", marker.options, "searchData:", marker.searchData);
-
-// Add to appropriate layer or directly to map
-if (point.Group && layers && layers[point.Group]) {
-  marker.addTo(layers[point.Group]);
-} else {
-  if (clusters) {
-    clusterGroup.addLayer(marker);
-  } else {
-    marker.addTo(map);
-  }
+// --- Create the cluster group up front (so search can see it) ---
+var markerClusterGroup = null;
+if (clusters) {
+    markerClusterGroup = L.markerClusterGroup({
+        maxClusterRadius: 10
+    });
 }
-markerArray.push(marker);
+
+// --- Create markers ---
+var markerArray = [];
+
+points.forEach(function(point) {
+    var marker = L.marker([point.lat, point.lng]);
+
+    // Add a combined search string
+    marker.searchData = 
+        (point.Name || '') + ' ' +
+        (point.Vehicle || '') + ' ' +
+        (point.Description || '');
+
+    // Ensure the marker has a feature object for Leaflet Search
+    if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
+    marker.feature.properties.searchData = marker.searchData;
+
+    console.log("Marker created:", marker.options, "searchData:", marker.searchData);
+
+    // Add to cluster or map
+    if (point.Group && layers && layers[point.Group]) {
+        marker.addTo(layers[point.Group]);
+    } else {
+        if (clusters && markerClusterGroup) {
+            markerClusterGroup.addLayer(marker);
+        } else {
+            marker.addTo(map);
+        }
+    }
+
+    markerArray.push(marker);
+});
+
+// --- Add cluster group to map if it exists ---
+if (clusters && markerClusterGroup) {
+    map.addLayer(markerClusterGroup);
 }
 
 // --- Combine all markers into a single feature group for search ---
@@ -213,62 +235,32 @@ var allMarkers = L.featureGroup(markerArray);
 
 // --- Add Leaflet Search control ---
 var searchControl = new L.Control.Search({
-  layer: allMarkers,
-  propertyName: 'searchData',   // now includes Name + Vehicle + Description
-  initial: false,
-  zoom: 16,
-  marker: false,
-  textPlaceholder: 'Search by Name, Vehicle, or Description...',
+    layer: allMarkers,
+    propertyName: 'searchData',
+    initial: false,
+    zoom: 16,
+    marker: false,
+    textPlaceholder: 'Search by Name, Vehicle, or Description...',
 
-moveToLocation: function(latlng, title, map) {
-  // Find the marker that matches the search result
-  var marker = allMarkers.getLayers().find(function(m) {
-    return m.searchData && m.searchData.includes(title);
-  });
+    moveToLocation: function(latlng, title, map) {
+        // Find the marker that matches the search result
+        var marker = allMarkers.getLayers().find(function(m) {
+            return m.searchData && m.searchData.includes(title);
+        });
+        if (!marker) return; // safety
 
-  if (!marker) return; // safety check
-
-  if (markerClusterGroup) {
-    markerClusterGroup.zoomToShowLayer(marker, function() {
-      marker.openPopup();
-    });
-  } else {
-    map.setView(marker.getLatLng(), 16);
-    marker.openPopup();
-  }
-}
+        if (markerClusterGroup) {
+            markerClusterGroup.zoomToShowLayer(marker, function() {
+                marker.openPopup();
+            });
+        } else {
+            map.setView(marker.getLatLng(), 16);
+            marker.openPopup();
+        }
+    }
 });
 
 map.addControl(searchControl);
-
-  var group = L.featureGroup(markerArray);
-  var clusters = (getSetting('_markercluster') === 'on') ? true : false;
-
-  // If no layer groups exist, add the feature group (possibly clustered) to the map
-  if (layers === undefined || layers.length === 0) {
-    if (clusters) {
-      var clusterGroup = L.markerClusterGroup({
-        maxClusterRadius: 10  // smaller number = less clustering
-      });
-      clusterGroup.addLayer(group);
-      map.addLayer(clusterGroup);
-    } else {
-      map.addLayer(group);
-    }
-  } else {
-    if (clusters) {
-      // Multilayer cluster support
-      multilayerClusterSupport = L.markerClusterGroup.layerSupport({
-        maxClusterRadius: 10
-      });
-      multilayerClusterSupport.addTo(map);
-
-      for (var lname in layers) {
-        if (!layers.hasOwnProperty(lname)) continue;
-        multilayerClusterSupport.checkIn(layers[lname]);
-        layers[lname].addTo(map);
-      }
-    }
 
     var pos = (getSetting('_pointsLegendPos') == 'off')
       ? 'topleft'
