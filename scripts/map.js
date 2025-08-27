@@ -203,6 +203,27 @@ marker.searchData =
     markerArray.push(marker);
   }
 
+  // --- Add search data to each marker (Name only for now) ---
+markerArray.forEach(function(marker) {
+  marker.searchData = marker.options.Name || '';
+});
+
+// --- Combine all markers into a single feature group for search ---
+var allMarkers = L.featureGroup(markerArray);
+
+// --- Add Leaflet Search control ---
+var searchControl = new L.Control.Search({
+  layer: allMarkers,
+  propertyName: 'searchData',   // we just added this property
+  initial: false,
+  zoom: 16,
+  marker: false,
+  textPlaceholder: 'Search by Name...'
+});
+
+map.addControl(searchControl);
+
+
   var group = L.featureGroup(markerArray);
   var clusters = (getSetting('_markercluster') === 'on') ? true : false;
 
@@ -1185,49 +1206,6 @@ marker.searchData =
 
        }
    });
-
-// --- Add searchData into marker options ---
-map.eachLayer(function(layer) {
-  if (layer instanceof L.Marker) {
-    layer.options.searchData = (layer.options.Name || '') + ' ' +
-                               (layer.options.Vehicle || '') + ' ' +
-                               (layer.options.Description || '');
-  } else if (layer instanceof L.LayerGroup) {
-    layer.eachLayer(function(subLayer){
-      if (subLayer instanceof L.Marker) {
-        subLayer.options.searchData = (subLayer.options.Name || '') + ' ' +
-                                      (subLayer.options.Vehicle || '') + ' ' +
-                                      (subLayer.options.Description || '');
-      }
-    });
-  }
-});
-
-// --- Combine all markers into one layer group for search ---
-var allMarkers = L.layerGroup();
-
-map.eachLayer(function(layer) {
-  if (layer instanceof L.Marker) {
-    allMarkers.addLayer(layer);
-  } else if (layer instanceof L.LayerGroup) {
-    layer.eachLayer(function(subLayer){
-      if (subLayer instanceof L.Marker) {
-        allMarkers.addLayer(subLayer);
-      }
-    });
-  }
-});
-
-// --- Add Leaflet Search control ---
-var searchControl = new L.Control.Search({
-  layer: allMarkers,
-  propertyName: 'searchData',  // now this matches marker.options.searchData
-  initial: false,
-  zoom: 16,
-  marker: false
-});
-
-map.addControl(searchControl);
 
   /**
    * Reformulates documentSettings as a dictionary, e.g.
