@@ -220,14 +220,23 @@ var searchControl = new L.Control.Search({
   marker: false,
   textPlaceholder: 'Search by Name, Vehicle, or Description...',
 
-    buildTip: function(text, val) {
-    // Only show the Name in the dropdown list
-    return '<a href="#">' + val.layer.feature.properties.Name + '</a>';
-  },
-
-  textFormat: function(text, val) {
-    // Only show the Name in the input box when a result is selected
-    return val.layer.feature.properties.Name;
+    // Only show the Name in dropdown suggestions
+  formatData: function(json) {
+    var newJson = {};
+    for (var key in json) {
+      if (json.hasOwnProperty(key)) {
+        // Find the actual marker that matches this key
+        var marker = allMarkers.getLayers().find(function(m) {
+          return m.searchData === key;
+        });
+        if (marker && marker.options && marker.options.title) {
+          newJson[key] = marker.options.title;
+        } else {
+          newJson[key] = "Unknown";
+        }
+      }
+    }
+    return newJson;
   },
 
 moveToLocation: function(latlng, title, map) {
@@ -250,6 +259,13 @@ moveToLocation: function(latlng, title, map) {
 });
 
 map.addControl(searchControl);
+
+  // --- Force input box to only show the Name after selecting ---
+map.on('search:locationfound', function(e) {
+  if (e.layer && e.layer.options && e.layer.options.title) {
+    document.querySelector('.search-input').value = e.layer.options.title;
+  }
+});
 
   var group = L.featureGroup(markerArray);
   var clusters = (getSetting('_markercluster') === 'on') ? true : false;
