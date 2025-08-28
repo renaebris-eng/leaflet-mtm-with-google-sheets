@@ -182,13 +182,13 @@ var marker = L.marker([lat, lng], {
   Description: point.Description
 }).bindPopup(popupContent);
     
-// Add a combined search string  
-marker.searchData = 
-  (point.Name || '') + ' ' +
-  (point.Vehicle || '') + ' ' +
-  (point.Description || '');
+// after creating marker and popup...
+marker.searchData = (point.Name || '') + ' ' + (point.Vehicle || '') + ' ' + (point.Description || '');
+marker.name = point.Name || '';         // clean display name
+marker.vehicle = point.Vehicle || '';
+marker.description = point.Description || '';
 
-// Ensure the marker has a feature object for Leaflet Search
+// also (optional but fine) ensure feature.properties.searchData exists
 if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
 marker.feature.properties.searchData = marker.searchData;
 
@@ -208,54 +208,89 @@ if (point.Group && layers && layers[point.Group]) {
 markerArray.push(marker);
 }
 
-// --- Combine all markers into a single feature group for search ---
+// combine markers (should be after markerArray is fully built)
 var allMarkers = L.featureGroup(markerArray);
 
-// --- Add Leaflet Search control ---
+// robust sourceData-based search control
 var searchControl = new L.Control.Search({
-  layer: allMarkers,
-  propertyName: 'searchData', 
-  initial: false,
-  zoom: 16,
-  marker: false,
-  textPlaceholder: 'Search by Name, Vehicle, or Description...',
+  sourceData: function(text, callResponse) {
+    // build results: keys = label shown in dropdown, values = LatLng for the plugin
+    var results = {};
+    if (!text || !text.length) { callResponse(results); return; }
+    var q = text.toLowerCase();
 
-    // Only show the Name in dropdown suggestions
-  formatData: function(json) {
-    var newJson = {};
-    for (var key in json) {
-      if (json.hasOwnProperty(key)) {
-        // Find the actual marker that matches this key
-        var marker = allMarkers.getLayers().find(function(m) {
-          return m.searchData === key;
-        });
-        if (marker && marker.options && marker.options.title) {
-          newJson[key] = marker.options.title;
-        } else {
-          newJson[key] = "Unknown";
+    allMarkers.eachLayer(function(marker, idx) {
+      if (!marker.searchData) return;
+      if (marker.searchData.toLowerCase().indexOf(q) !== -1) {
+        // label to show in dropdown: use Name (fallback "Unknown")
+        var label = (marker.name && marker.name.trim()) ? marker.name.trim() : 'Unknown';
+        // make label unique if duplicate (append small index)
+        var unique = label;
+        var i = 1;
+        while (results.hasOwnProperty(unique)) {
+          unique = label + ' (' + i + ')';
+          i++;
         }
+        results[unique] = marker.getLatLng();
       }
-    }
-    return newJson;
+    });
+
+    callResponse(results);
   },
 
-moveToLocation: function(latlng, title, map) {
-  // Find the marker that matches the search result
-  var marker = allMarkers.getLayers().find(function(m) {
-    return m.searchData && m.searchData.includes(title);
+  marker: false,
+  initial: false,
+  zoom: 16,
+  textPlaceholder: 'Search by Name, Vehicle, or Description...'
+});
+
+// when a location is found (user clicks or hits enter), the control triggers moveToLocation,
+// but with sourceData we still get latlng/title — we need to find the original marker object.
+searchControl.on('search:locationfound', function(e) {
+  // e.latlng is the location, e.text is the label (what was shown in dropdown)
+  var foundLabel = e.text;
+  var foundLatLng = e.latlng;
+  var chosen = null;
+
+  // First try to find by exact name match and close lat/lng (tolerance)
+  var tol = 0.0005; // ~0.05 km tolerance
+  allMarkers.eachLayer(function(marker) {
+    var name = (marker.name || '').toString();
+    if (name === foundLabel) {
+      var ml = marker.getLatLng();
+      if (Math.abs(ml.lat - foundLatLng.lat) < tol && Math.abs(ml.lng - foundLatLng.lng) < tol) {
+        chosen = marker;
+      }
+    }
   });
 
-  if (!marker) return; // safety check
+  // fallback: if not found, try best coordinate match (distance)
+  if (!chosen) {
+    var best = null;
+    var bestDist = Infinity;
+    allMarkers.eachLayer(function(marker) {
+      var d = marker.getLatLng().distanceTo(foundLatLng);
+      if (d < bestDist) { bestDist = d; best = marker; }
+    });
+    // accept fallback if within 1000 meters
+    if (best && bestDist < 1000) chosen = best;
+  }
 
-  if (markerClusterGroup) {
-    markerClusterGroup.zoomToShowLayer(marker, function() {
-      marker.openPopup();
+  if (!chosen) return; // nothing to do
+
+  // Zoom / reveal / open popup
+  if (typeof markerClusterGroup !== 'undefined' && markerClusterGroup) {
+    markerClusterGroup.zoomToShowLayer(chosen, function() {
+      chosen.openPopup();
     });
   } else {
-    map.setView(marker.getLatLng(), 16);
-    marker.openPopup();
+    map.setView(chosen.getLatLng(), 16);
+    chosen.openPopup();
   }
-}
+
+  // set search input to just the Name shown (clean input)
+  var input = document.querySelector('.search-input, .leaflet-control-search-input');
+  if (input) input.value = chosen.name || foundLabel;
 });
 
 map.addControl(searchControl);
