@@ -211,96 +211,54 @@ markerArray.push(marker);
 // combine markers (should be after markerArray is fully built)
 var allMarkers = L.featureGroup(markerArray);
 
-// robust sourceData-based search control
+// --- Add Leaflet Search control ---
 var searchControl = new L.Control.Search({
-  sourceData: function(text, callResponse) {
-    // build results: keys = label shown in dropdown, values = LatLng for the plugin
-    var results = {};
-    if (!text || !text.length) { callResponse(results); return; }
-    var q = text.toLowerCase();
-
-    allMarkers.eachLayer(function(marker, idx) {
-      if (!marker.searchData) return;
-      if (marker.searchData.toLowerCase().indexOf(q) !== -1) {
-        // label to show in dropdown: use Name (fallback "Unknown")
-        var label = (marker.name && marker.name.trim()) ? marker.name.trim() : 'Unknown';
-        // make label unique if duplicate (append small index)
-        var unique = label;
-        var i = 1;
-        while (results.hasOwnProperty(unique)) {
-          unique = label + ' (' + i + ')';
-          i++;
-        }
-        results[unique] = marker.getLatLng();
-      }
-    });
-
-    callResponse(results);
-  },
-
-  marker: false,
+  layer: allMarkers,
+  propertyName: 'searchData',   // still searches across Name + Vehicle + Description
   initial: false,
   zoom: 16,
-  textPlaceholder: 'Search by Name, Vehicle, or Description...'
-});
+  marker: false,
+  textPlaceholder: 'Search by Name, Vehicle, or Description...',
 
-// when a location is found (user clicks or hits enter), the control triggers moveToLocation,
-// but with sourceData we still get latlng/title — we need to find the original marker object.
-searchControl.on('search:locationfound', function(e) {
-  // e.latlng is the location, e.text is the label (what was shown in dropdown)
-  var foundLabel = e.text;
-  var foundLatLng = e.latlng;
-  var chosen = null;
-
-  // First try to find by exact name match and close lat/lng (tolerance)
-  var tol = 0.0005; // ~0.05 km tolerance
-  allMarkers.eachLayer(function(marker) {
-    var name = (marker.name || '').toString();
-    if (name === foundLabel) {
-      var ml = marker.getLatLng();
-      if (Math.abs(ml.lat - foundLatLng.lat) < tol && Math.abs(ml.lng - foundLatLng.lng) < tol) {
-        chosen = marker;
+  // Format dropdown results: only show Name
+  formatData: function(json) {
+    var newJson = {};
+    for (var key in json) {
+      if (json.hasOwnProperty(key)) {
+        var layer = json[key].layer;
+        if (layer && layer.options && layer.options.title) {
+          newJson[key] = {
+            ...json[key],
+            text: layer.options.title // only show Name
+          };
+        }
       }
     }
-  });
+    return newJson;
+  },
 
-  // fallback: if not found, try best coordinate match (distance)
-  if (!chosen) {
-    var best = null;
-    var bestDist = Infinity;
-    allMarkers.eachLayer(function(marker) {
-      var d = marker.getLatLng().distanceTo(foundLatLng);
-      if (d < bestDist) { bestDist = d; best = marker; }
-    });
-    // accept fallback if within 1000 meters
-    if (best && bestDist < 1000) chosen = best;
+  moveToLocation: function(latlng, title, map) {
+    var marker = this._layer; // marker that matched
+    if (markerClusterGroup) {
+      markerClusterGroup.zoomToShowLayer(marker, function() {
+        marker.openPopup();
+      });
+    } else {
+      map.setView(marker.getLatLng(), 16);
+      marker.openPopup();
+    }
   }
-
-  if (!chosen) return; // nothing to do
-
-  // Zoom / reveal / open popup
-  if (typeof markerClusterGroup !== 'undefined' && markerClusterGroup) {
-    markerClusterGroup.zoomToShowLayer(chosen, function() {
-      chosen.openPopup();
-    });
-  } else {
-    map.setView(chosen.getLatLng(), 16);
-    chosen.openPopup();
-  }
-
-  // set search input to just the Name shown (clean input)
-  var input = document.querySelector('.search-input, .leaflet-control-search-input');
-  if (input) input.value = chosen.name || foundLabel;
 });
 
 map.addControl(searchControl);
 
-  // --- Force input box to only show the Name after selecting ---
+// --- Force input box to only show the Name after selecting ---
 map.on('search:locationfound', function(e) {
   if (e.layer && e.layer.options && e.layer.options.title) {
     document.querySelector('.search-input').value = e.layer.options.title;
   }
 });
+
 
   var group = L.featureGroup(markerArray);
   var clusters = (getSetting('_markercluster') === 'on') ? true : false;
