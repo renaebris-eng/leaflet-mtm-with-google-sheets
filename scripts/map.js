@@ -179,12 +179,12 @@ function cleanText(text) {
   return text ? text.replace(/[\r\n]+/g, " ").replace(/"/g, "'") : "";
 }
 
-var searchTitle = cleanText(name + " - " + vehicle + " " + description);
+var searchTitle = cleanText(Name + " - " + Vehicle + " " + Description);
 
 var marker = L.marker([lat, lng], {
   title: name  // optional, but good for popup fallback
 });
-marker.searchData = name + " " + vehicle + " " + description; // still searchable
+marker.searchData = name + " " + Vehicle + " " + description; // still searchable
 marker.displayName = name + " - " + year;  // clean label shown in dropdown
 allMarkers.addLayer(marker);
     
