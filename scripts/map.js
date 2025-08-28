@@ -21,7 +21,7 @@ $(window).on('load', function() {
     });
   }
 
-  
+
   /**
    * Sets the map view so that all markers are visible, or
    * to specified (lat, lon) and zoom if all three are specified
@@ -174,16 +174,13 @@ function mapPoints(points, layers) {
       ${point['Description'] || ''}<br>
       ${sourcesLinks ? '<br>' + sourcesLinks : ''}
     `;
-// Clean up text for searching
-function cleanText(text) {
-  return text ? text.replace(/[\r\n]+/g, " ").replace(/"/g, "'") : "";
-}
-
-var searchTitle = cleanText(Name + " - " + Vehicle + " " + Description);
-
-var marker = L.marker([lat, lng], {
-  title: name + " - " + vehicle,   // only Name + Vehicle
-});
+// Create the marker with validated coords
+var marker = L.marker([lat, lng], { 
+  icon: icon,
+  Name: point.Name,
+  Vehicle: point.Vehicle,
+  Description: point.Description
+}).bindPopup(popupContent);
     
 // Add a combined search string  
 marker.searchData = 
@@ -213,27 +210,34 @@ markerArray.push(marker);
 
 // --- Combine all markers into a single feature group for search ---
 var allMarkers = L.featureGroup(markerArray);
-  
-map.addControl(new L.Control.Search({
-  layer: markers,
-  propertyName: 'title',  // search only Name + Vehicle
-  initial: false,
-  zoom: 12,
-  marker: false,
-  moveToLocation: function(latlng, title, map) {
-    map.setView(latlng, 12);
-  }
-}));
 
-// --- Override how search results are displayed ---
-searchControl._formatData = function(json) {
-  var ret = {};
-  for (var key in json) {
-    var layer = json[key].layer;
-    ret[layer.displayName || key] = json[key];  // show clean name in dropdown
+// --- Add Leaflet Search control ---
+var searchControl = new L.Control.Search({
+  layer: allMarkers,
+  propertyName: 'searchData',   // now includes Name + Vehicle + Description
+  initial: false,
+  zoom: 16,
+  marker: false,
+  textPlaceholder: 'Search by Name, Vehicle, or Description...',
+
+moveToLocation: function(latlng, title, map) {
+  // Find the marker that matches the search result
+  var marker = allMarkers.getLayers().find(function(m) {
+    return m.searchData && m.searchData.includes(title);
+  });
+
+  if (!marker) return; // safety check
+
+  if (markerClusterGroup) {
+    markerClusterGroup.zoomToShowLayer(marker, function() {
+      marker.openPopup();
+    });
+  } else {
+    map.setView(marker.getLatLng(), 16);
+    marker.openPopup();
   }
-  return ret;
-};
+}
+});
 
 map.addControl(searchControl);
 
