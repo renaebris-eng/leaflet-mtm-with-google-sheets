@@ -174,13 +174,19 @@ function mapPoints(points, layers) {
       ${point['Description'] || ''}<br>
       ${sourcesLinks ? '<br>' + sourcesLinks : ''}
     `;
-// Create the marker with validated coords
-var marker = L.marker([lat, lng], { 
-  icon: icon,
-  Name: point.Name,
-  Vehicle: point.Vehicle,
-  Description: point.Description
-}).bindPopup(popupContent);
+// Clean up text for searching
+function cleanText(text) {
+  return text ? text.replace(/[\r\n]+/g, " ").replace(/"/g, "'") : "";
+}
+
+var searchTitle = cleanText(name + " - " + vehicle + " " + description);
+
+var marker = L.marker([lat, lng], {
+  title: name  // optional, but good for popup fallback
+});
+marker.searchData = name + " " + vehicle + " " + description; // still searchable
+marker.displayName = name + " - " + year;  // clean label shown in dropdown
+allMarkers.addLayer(marker);
     
 // Add a combined search string  
 marker.searchData = 
@@ -211,33 +217,40 @@ markerArray.push(marker);
 // --- Combine all markers into a single feature group for search ---
 var allMarkers = L.featureGroup(markerArray);
 
-// --- Add Leaflet Search control ---
 var searchControl = new L.Control.Search({
   layer: allMarkers,
-  propertyName: 'searchData',   // now includes Name + Vehicle + Description
+  propertyName: 'searchData',   // search across Name + Vehicle + Description
   initial: false,
   zoom: 16,
   marker: false,
   textPlaceholder: 'Search by Name, Vehicle, or Description...',
-
-moveToLocation: function(latlng, title, map) {
-  // Find the marker that matches the search result
-  var marker = allMarkers.getLayers().find(function(m) {
-    return m.searchData && m.searchData.includes(title);
-  });
-
-  if (!marker) return; // safety check
-
-  if (markerClusterGroup) {
-    markerClusterGroup.zoomToShowLayer(marker, function() {
-      marker.openPopup();
+  moveToLocation: function(latlng, title, map) {
+    var marker = allMarkers.getLayers().find(function(m) {
+      return m.searchData && m.searchData.includes(title);
     });
-  } else {
-    map.setView(marker.getLatLng(), 16);
-    marker.openPopup();
+
+    if (!marker) return;
+
+    if (markerClusterGroup) {
+      markerClusterGroup.zoomToShowLayer(marker, function() {
+        marker.openPopup();
+      });
+    } else {
+      map.setView(marker.getLatLng(), 16);
+      marker.openPopup();
+    }
   }
-}
 });
+
+// --- Override how search results are displayed ---
+searchControl._formatData = function(json) {
+  var ret = {};
+  for (var key in json) {
+    var layer = json[key].layer;
+    ret[layer.displayName || key] = json[key];  // show clean name in dropdown
+  }
+  return ret;
+};
 
 map.addControl(searchControl);
 
