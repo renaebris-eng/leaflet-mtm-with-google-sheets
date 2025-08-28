@@ -214,11 +214,21 @@ var allMarkers = L.featureGroup(markerArray);
 // --- Add Leaflet Search control ---
 var searchControl = new L.Control.Search({
   layer: allMarkers,
-  propertyName: 'searchData',   // now includes Name + Vehicle + Description
+  propertyName: 'searchData', 
   initial: false,
   zoom: 16,
   marker: false,
   textPlaceholder: 'Search by Name, Vehicle, or Description...',
+
+    buildTip: function(text, val) {
+    // Only show the Name in the dropdown list
+    return '<a href="#">' + val.layer.feature.properties.Name + '</a>';
+  },
+
+  textFormat: function(text, val) {
+    // Only show the Name in the input box when a result is selected
+    return val.layer.feature.properties.Name;
+  },
 
 moveToLocation: function(latlng, title, map) {
   // Find the marker that matches the search result
