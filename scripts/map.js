@@ -21,7 +21,7 @@ $(window).on('load', function() {
     });
   }
 
-
+  
   /**
    * Sets the map view so that all markers are visible, or
    * to specified (lat, lon) and zoom if all three are specified
@@ -182,11 +182,8 @@ function cleanText(text) {
 var searchTitle = cleanText(Name + " - " + Vehicle + " " + Description);
 
 var marker = L.marker([lat, lng], {
-  title: name  // optional, but good for popup fallback
+  title: name + " - " + vehicle,   // only Name + Vehicle
 });
-marker.searchData = name + " " + Vehicle + " " + description; // still searchable
-marker.displayName = name + " - " + year;  // clean label shown in dropdown
-allMarkers.addLayer(marker);
     
 // Add a combined search string  
 marker.searchData = 
@@ -216,31 +213,17 @@ markerArray.push(marker);
 
 // --- Combine all markers into a single feature group for search ---
 var allMarkers = L.featureGroup(markerArray);
-
-var searchControl = new L.Control.Search({
-  layer: allMarkers,
-  propertyName: 'searchData',   // search across Name + Vehicle + Description
+  
+map.addControl(new L.Control.Search({
+  layer: markers,
+  propertyName: 'title',  // search only Name + Vehicle
   initial: false,
-  zoom: 16,
+  zoom: 12,
   marker: false,
-  textPlaceholder: 'Search by Name, Vehicle, or Description...',
   moveToLocation: function(latlng, title, map) {
-    var marker = allMarkers.getLayers().find(function(m) {
-      return m.searchData && m.searchData.includes(title);
-    });
-
-    if (!marker) return;
-
-    if (markerClusterGroup) {
-      markerClusterGroup.zoomToShowLayer(marker, function() {
-        marker.openPopup();
-      });
-    } else {
-      map.setView(marker.getLatLng(), 16);
-      marker.openPopup();
-    }
+    map.setView(latlng, 12);
   }
-});
+}));
 
 // --- Override how search results are displayed ---
 searchControl._formatData = function(json) {
