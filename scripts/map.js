@@ -182,13 +182,13 @@ var marker = L.marker([lat, lng], {
   Description: point.Description
 }).bindPopup(popupContent);
     
-// after creating marker and popup...
-marker.searchData = (point.Name || '') + ' ' + (point.Vehicle || '') + ' ' + (point.Description || '');
-marker.name = point.Name || '';         // clean display name
-marker.vehicle = point.Vehicle || '';
-marker.description = point.Description || '';
+// Add a combined search string  
+marker.searchData = 
+  (point.Name || '') + ' ' +
+  (point.Vehicle || '') + ' ' +
+  (point.Description || '');
 
-// also (optional but fine) ensure feature.properties.searchData exists
+// Ensure the marker has a feature object for Leaflet Search
 if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
 marker.feature.properties.searchData = marker.searchData;
 
@@ -208,57 +208,38 @@ if (point.Group && layers && layers[point.Group]) {
 markerArray.push(marker);
 }
 
-// combine markers (should be after markerArray is fully built)
+// --- Combine all markers into a single feature group for search ---
 var allMarkers = L.featureGroup(markerArray);
 
 // --- Add Leaflet Search control ---
 var searchControl = new L.Control.Search({
   layer: allMarkers,
-  propertyName: 'searchData',   // still searches across Name + Vehicle + Description
+  propertyName: 'searchData',   // now includes Name + Vehicle + Description
   initial: false,
   zoom: 16,
   marker: false,
   textPlaceholder: 'Search by Name, Vehicle, or Description...',
 
-  // Format dropdown results: only show Name
-  formatData: function(json) {
-    var newJson = {};
-    for (var key in json) {
-      if (json.hasOwnProperty(key)) {
-        var layer = json[key].layer;
-        if (layer && layer.options && layer.options.title) {
-          newJson[key] = {
-            ...json[key],
-            text: layer.options.title // only show Name
-          };
-        }
-      }
-    }
-    return newJson;
-  },
+moveToLocation: function(latlng, title, map) {
+  // Find the marker that matches the search result
+  var marker = allMarkers.getLayers().find(function(m) {
+    return m.searchData && m.searchData.includes(title);
+  });
 
-  moveToLocation: function(latlng, title, map) {
-    var marker = this._layer; // marker that matched
-    if (markerClusterGroup) {
-      markerClusterGroup.zoomToShowLayer(marker, function() {
-        marker.openPopup();
-      });
-    } else {
-      map.setView(marker.getLatLng(), 16);
+  if (!marker) return; // safety check
+
+  if (markerClusterGroup) {
+    markerClusterGroup.zoomToShowLayer(marker, function() {
       marker.openPopup();
-    }
+    });
+  } else {
+    map.setView(marker.getLatLng(), 16);
+    marker.openPopup();
   }
+}
 });
 
 map.addControl(searchControl);
-
-// --- Force input box to only show the Name after selecting ---
-map.on('search:locationfound', function(e) {
-  if (e.layer && e.layer.options && e.layer.options.title) {
-    document.querySelector('.search-input').value = e.layer.options.title;
-  }
-});
-
 
   var group = L.featureGroup(markerArray);
   var clusters = (getSetting('_markercluster') === 'on') ? true : false;
