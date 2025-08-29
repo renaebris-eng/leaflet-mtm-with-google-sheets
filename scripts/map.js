@@ -216,92 +216,66 @@ markerArray.push(marker);
 // --- Combine all markers into a single feature group for search ---
 var allMarkers = L.featureGroup(markerArray);
 
-// --- Add Leaflet Search control (custom source so we control display & zoom) ---
+// --- Add Leaflet Search control ---
 var searchControl = new L.Control.Search({
-  // We’ll supply results ourselves so we can show only the Name
-  sourceData: function (text, callResponse) {
-    var results = {};
-    var q = (text || '').toLowerCase();
-
-    allMarkers.eachLayer(function (marker) {
-      // use the cleaned, combined text you already stored
-      var hay = ((marker.feature && marker.feature.properties && marker.feature.properties.searchData) ||
-                 marker.searchData || '').toLowerCase();
-
-      if (hay.indexOf(q) !== -1) {
-        // --- Figure out a clean display name for the dropdown ---
-        var label = (marker.options && (marker.options.title || marker.options.Name)) || null;
-
-        // fallback: try to grab <b>NAME</b> from the popup HTML
-        if (!label && marker.getPopup && marker.getPopup()) {
-          var html = marker.getPopup().getContent();
-          if (typeof html === 'string') {
-            var m = html.match(/<b>([^<]+)<\/b>/i);
-            if (m) label = m[1].trim();
-          }
-        }
-        if (!label) label = 'Result';
-
-        // Use a unique key to avoid overwriting duplicates in the results object,
-        // but we’ll hide the suffix in formatData below.
-        var key = label + ' — ' + marker._leaflet_id;
-        results[key] = marker.getLatLng();
-      }
-    });
-
-    callResponse(results);
-    return results;
-  },
-
-  // Show just the Name in the dropdown (strip our unique id suffix)
-  formatData: function (json) {
-    var out = {};
-    for (var k in json) {
-      if (!json.hasOwnProperty(k)) continue;
-      var nameOnly = k.split(' — ')[0]; // everything before the em dash
-      out[nameOnly] = json[k];
-    }
-    return out;
-  },
-
-  textPlaceholder: 'Search by Name, Vehicle, or Description...',
+  layer: allMarkers,
+  propertyName: 'searchData',   // ✅ tells Leaflet Search what to match
+  initial: false,
+  zoom: false,                  // we’ll control zoom manually
   marker: false,
-  minLength: 2,
-  autoCollapse: true,
-  zoom: false, // we'll handle zoom ourselves
+  textPlaceholder: 'Search by Name, Vehicle, or Description...',
 
-  // Always zoom to the found marker first, then open its popup
-  moveToLocation: function (latlng, title, map) {
-    var target = null;
-
-    // find the actual marker that matches this latlng
-    allMarkers.eachLayer(function (m) {
-      if (m.getLatLng && m.getLatLng().equals(latlng)) target = m;
+  moveToLocation: function(latlng, title, map) {
+    // Find the marker that matches the search result
+    var marker = allMarkers.getLayers().find(function(m) {
+      return m.searchData && m.searchData.includes(title);
     });
 
-    if (!target) {
-      map.setView(latlng, 16);
-      return;
-    }
+    if (!marker) return; // safety check
 
-    // If clustered, open the cluster then zoom & open popup
-    if (typeof clusterGroup !== 'undefined' && clusterGroup && clusterGroup.zoomToShowLayer) {
-      clusterGroup.zoomToShowLayer(target, function () {
-        map.setView(target.getLatLng(), 16);
-        target.openPopup();
-      });
-    } else if (typeof multilayerClusterSupport !== 'undefined' && multilayerClusterSupport && multilayerClusterSupport.zoomToShowLayer) {
-      multilayerClusterSupport.zoomToShowLayer(target, function () {
-        map.setView(target.getLatLng(), 16);
-        target.openPopup();
+    if (clusterGroup) {
+      clusterGroup.zoomToShowLayer(marker, function() {
+        map.setView(marker.getLatLng(), 16);  // 👈 zoom FIRST
+        marker.openPopup();                   // 👈 then open popup
       });
     } else {
-      map.setView(target.getLatLng(), 16);
-      target.openPopup();
+      map.setView(marker.getLatLng(), 16);
+      marker.openPopup();
     }
   }
 });
 
+map.addControl(searchControl);
+
+  var group = L.featureGroup(markerArray);
+  var clusters = (getSetting('_markercluster') === 'on') ? true : false;
+
+  // If no layer groups exist, add the feature group (possibly clustered) to the map
+  if (layers === undefined || layers.length === 0) {
+    if (clusters) {
+      var clusterGroup = L.markerClusterGroup({
+        maxClusterRadius: 10  // smaller number = less clustering
+      });
+      clusterGroup.addLayer(group);
+      map.addLayer(clusterGroup);
+    } else {
+      map.addLayer(group);
+    }
+  } else {
+    if (clusters) {
+      // Multilayer cluster support
+      multilayerClusterSupport = L.markerClusterGroup.layerSupport({
+        maxClusterRadius: 10
+      });
+      multilayerClusterSupport.addTo(map);
+
+      for (var lname in layers) {
+        if (!layers.hasOwnProperty(lname)) continue;
+        multilayerClusterSupport.checkIn(layers[lname]);
+        layers[lname].addTo(map);
+      }
+    }
+    
 map.addControl(searchControl);
 
     var pos = (getSetting('_pointsLegendPos') == 'off')
