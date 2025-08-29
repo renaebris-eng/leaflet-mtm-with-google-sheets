@@ -225,18 +225,11 @@ var searchControl = new L.Control.Search({
   marker: false,
   textPlaceholder: 'Search by Name, Vehicle, or Description...',
 
-formatData: function(json) {
-  var newJson = {};
-  for (var key in json) {
-    if (!json.hasOwnProperty(key)) continue;
-    var marker = allMarkers.getLayers().find(m => m.getLatLng().equals(json[key]));
-    if (marker && marker.point) {
-      // ✅ Always only show the Name
-      newJson[marker.point.Name || "Unnamed"] = json[key];
-    }
+  buildTip: function(text, val) {
+    // Always display only Name
+    return '<a href="#">' + (val.layer.point.Name || "Unnamed") + '</a>';
   }
-  return newJson;
-},
+});
 
   moveToLocation: function(latlng, title, map) {
     // Find the marker that matches the search result
