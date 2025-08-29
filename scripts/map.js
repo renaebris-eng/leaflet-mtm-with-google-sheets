@@ -181,12 +181,17 @@ var marker = L.marker([lat, lng], {
   Vehicle: point.Vehicle,
   Description: point.Description
 }).bindPopup(popupContent);
+
+// Small helper to clean text
+function cleanText(str) {
+  return (str || "").replace(/\s+/g, " ").trim();
+}
     
 // Add a combined search string
 marker.searchData =
-  (point.Name || '') + ' ' +
-  (point.Vehicle || '') + ' ' +
-  (point.Description || '');
+  cleanText(point.Name) + " " +
+  cleanText(point.Vehicle) + " " +
+  cleanText(point.Description);
 
 // Ensure the marker has a feature object for Leaflet Search
 if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
