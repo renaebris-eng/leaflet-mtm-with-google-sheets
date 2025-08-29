@@ -197,6 +197,9 @@ marker.searchData =
 if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
 marker.feature.properties.searchData = marker.searchData;
 
+// 💾 Save the full row data (so we can display just the Name later in search)
+marker.options.pointData = point;
+
 // Debug log
 console.log("Marker created:", marker.options.title, "searchData:", marker.searchData);
 
@@ -242,6 +245,23 @@ var searchControl = new L.Control.Search({
       map.setView(marker.getLatLng(), 16);
       marker.openPopup();
     }
+  },
+
+  // 👇 Force search results to show only the Name
+  formatData: function(json) {
+    return Object.keys(json).reduce(function(acc, key) {
+      var marker = json[key];
+      if (marker && marker.options && marker.options.pointData) {
+        acc[key] = marker.options.pointData.Name || "Unknown";
+      } else {
+        acc[key] = key; // fallback
+      }
+      return acc;
+    }, {});
+  },
+
+  buildTip: function(text, val) {
+    return '<div class="search-tip">' + text + '</div>';
   }
 });
 
