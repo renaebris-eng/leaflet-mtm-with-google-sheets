@@ -224,10 +224,7 @@ var searchControl = new L.Control.Search({
   zoom: false,                  // we’ll control zoom manually
   marker: false,
   textPlaceholder: 'Search by Name, Vehicle, or Description...',
-
-  buildTip: function(text, val) {
-    // Always display only Name
-    return '<a href="#">' + (val.layer.point.Name || "Unnamed") + '</a>';
+    }
   }
 });
 
