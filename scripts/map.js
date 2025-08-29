@@ -182,8 +182,8 @@ var marker = L.marker([lat, lng], {
   Description: point.Description
 }).bindPopup(popupContent);
     
-// Add a combined search string  
-marker.searchData = 
+// Add a combined search string
+marker.searchData =
   (point.Name || '') + ' ' +
   (point.Vehicle || '') + ' ' +
   (point.Description || '');
@@ -192,8 +192,8 @@ marker.searchData =
 if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
 marker.feature.properties.searchData = marker.searchData;
 
-// 🔍 Debug log to check what’s inside each marker
-console.log("Marker created:", marker.options, "searchData:", marker.searchData);
+// Debug log
+console.log("Marker created:", marker.options.title, "searchData:", marker.searchData);
 
 // Add to appropriate layer or directly to map
 if (point.Group && layers && layers[point.Group]) {
@@ -214,29 +214,30 @@ var allMarkers = L.featureGroup(markerArray);
 // --- Add Leaflet Search control ---
 var searchControl = new L.Control.Search({
   layer: allMarkers,
-  propertyName: 'searchData',   // now includes Name + Vehicle + Description
+  propertyName: 'searchData',   // ✅ tells Leaflet Search what to match
   initial: false,
-  zoom: 16,
+  zoom: false,                  // we’ll control zoom manually
   marker: false,
   textPlaceholder: 'Search by Name, Vehicle, or Description...',
 
-moveToLocation: function(latlng, title, map) {
-  // Find the marker that matches the search result
-  var marker = allMarkers.getLayers().find(function(m) {
-    return m.searchData && m.searchData.includes(title);
-  });
-
-  if (!marker) return; // safety check
-
-  if (markerClusterGroup) {
-    markerClusterGroup.zoomToShowLayer(marker, function() {
-      marker.openPopup();
+  moveToLocation: function(latlng, title, map) {
+    // Find the marker that matches the search result
+    var marker = allMarkers.getLayers().find(function(m) {
+      return m.searchData && m.searchData.includes(title);
     });
-  } else {
-    map.setView(marker.getLatLng(), 16);
-    marker.openPopup();
+
+    if (!marker) return; // safety check
+
+    if (clusterGroup) {
+      clusterGroup.zoomToShowLayer(marker, function() {
+        map.setView(marker.getLatLng(), 16);  // 👈 zoom FIRST
+        marker.openPopup();                   // 👈 then open popup
+      });
+    } else {
+      map.setView(marker.getLatLng(), 16);
+      marker.openPopup();
+    }
   }
-}
 });
 
 map.addControl(searchControl);
