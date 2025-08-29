@@ -219,11 +219,24 @@ var allMarkers = L.featureGroup(markerArray);
 // --- Add Leaflet Search control ---
 var searchControl = new L.Control.Search({
   layer: allMarkers,
-  propertyName: 'searchData',   // ✅ tells Leaflet Search what to match
+  propertyName: 'searchData',   // Tells Leaflet Search what to match
   initial: false,
   zoom: false,                  // we’ll control zoom manually
   marker: false,
   textPlaceholder: 'Search by Name, Vehicle, or Description...',
+
+  // Control what shows in dropdown & search box
+  formatData: function(json) {
+    var newJson = {};
+    for (var key in json) {
+      if (!json.hasOwnProperty(key)) continue;
+      var marker = allMarkers.getLayers().find(m => m.getLatLng().equals(json[key]));
+      if (marker) {
+        newJson[marker.options.title || marker.point?.Name || "Result"] = json[key];
+      }
+    }
+    return newJson;
+  },
 
   moveToLocation: function(latlng, title, map) {
     // Find the marker that matches the search result
