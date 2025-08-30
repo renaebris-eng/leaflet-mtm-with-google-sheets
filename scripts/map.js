@@ -1075,27 +1075,37 @@ map.addControl(searchControl);
 
 
   /**
-   * Loads the basemap and adds it to the map
-   */
-  function addBaseMap() {
+ * Loads the basemap and adds it to the map
+ */
+function addBaseMap() {
 
     var basemap = trySetting('_tileProvider', 'CartoDB.Positron');
-    
-    L.tileLayer.provider(basemap, {
-      maxZoom: 18,
+    var apiKey = trySetting('_tileProviderApiKey', '');
 
-      // Pass the api key to most commonly used parameters
-      apiKey: trySetting('_tileProviderApiKey', ''),
-      apikey: trySetting('_tileProviderApiKey', ''),
-      key: trySetting('_tileProviderApiKey', ''),
-      accessToken: trySetting('_tileProviderApiKey', '')
-    }).addTo(map);
+    // If basemap looks like a URL, use L.tileLayer directly
+    if (basemap.startsWith('http')) {
+        if (apiKey) {
+            basemap += (basemap.includes('?') ? '&' : '?') + 'api_key=' + apiKey;
+        }
+        L.tileLayer(basemap, {
+            maxZoom: 20 // Stadia supports up to 20
+        }).addTo(map);
+    } else {
+        // Otherwise use provider shorthand
+        L.tileLayer.provider(basemap, {
+            maxZoom: 18,
+            apiKey: apiKey,
+            apikey: apiKey,
+            key: apiKey,
+            accessToken: apiKey
+        }).addTo(map);
+    }
 
     L.control.attribution({
-      position: trySetting('_mapAttribution', 'bottomright')
+        position: trySetting('_mapAttribution', 'bottomright')
     }).addTo(map);
 
-  }
+}
 
   /**
    * Returns the value of a setting s
