@@ -174,23 +174,85 @@ function mapPoints(points, layers) {
       ${point['Description'] || ''}<br>
       ${sourcesLinks ? '<br>' + sourcesLinks : ''}
     `;
+// Create the marker with validated coords
+var marker = L.marker([lat, lng], { 
+  icon: icon,
+  Name: point.Name,
+  Vehicle: point.Vehicle,
+  Description: point.Description
+}).bindPopup(popupContent);
 
-    // Create the marker with validated coords
-    var marker = L.marker([lat, lng], { icon: icon }).bindPopup(popupContent);
+// Small helper to clean text
+function cleanText(str) {
+  return (str || "").replace(/\s+/g, " ").trim();
+}
+    
+// Add a combined search string
+marker.searchData =
+  cleanText(point.Name) + " " +
+  cleanText(point.Vehicle) + " " +
+  cleanText(point.Description);
 
-    // Add to appropriate layer or directly to map
-    if (point.Group && layers && layers[point.Group]) {
-      marker.addTo(layers[point.Group]);
-    } else {
-      // No group → put marker directly on the map or cluster
-      if (clusters) {
-        clusterGroup.addLayer(marker);
-      } else {
-        marker.addTo(map);
-      }
-    }
-    markerArray.push(marker);
+// Ensure the marker has a feature object for Leaflet Search
+if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
+marker.feature.properties.searchData = marker.searchData;
+
+// Debug log
+console.log("Marker created:", marker.options.title, "searchData:", marker.searchData);
+
+// Add to appropriate layer or directly to map
+if (point.Group && layers && layers[point.Group]) {
+  marker.addTo(layers[point.Group]);
+} else {
+  if (clusters) {
+    clusterGroup.addLayer(marker);
+  } else {
+    marker.addTo(map);
   }
+}
+markerArray.push(marker);
+}
+
+// --- Combine all markers into a single feature group for search ---
+var allMarkers = L.featureGroup(markerArray);
+
+// --- Add Leaflet Search control --- 219
+var searchControl = new L.Control.Search({
+  layer: allMarkers,
+  propertyName: 'searchData',   // Tells Leaflet Search what to match
+  initial: false,
+  zoom: false,                  // we’ll control zoom manually
+  marker: false,
+  textPlaceholder: 'Search by Name, Vehicle, or Description...',
+
+    // show only the Name in the suggestions
+    textFormatter: function(marker) {
+      return marker.options.title || marker.Name || "";  
+      // make sure your marker has a "title" or "Name" property
+    },
+
+  moveToLocation: function(latlng, title, map) {
+    // Find the marker that matches the search result
+    var marker = allMarkers.getLayers().find(function(m) {
+      return m.searchData && m.searchData.includes(title);
+    });
+
+
+    if (!marker) return; // safety check
+
+    if (clusterGroup) {
+      clusterGroup.zoomToShowLayer(marker, function() {
+        map.setView(marker.getLatLng(), 16);  // 👈 zoom FIRST
+        marker.openPopup();                   // 👈 then open popup
+      });
+    } else {
+      map.setView(marker.getLatLng(), 16);
+      marker.openPopup();
+    }
+  }
+});
+
+map.addControl(searchControl);
 
   var group = L.featureGroup(markerArray);
   var clusters = (getSetting('_markercluster') === 'on') ? true : false;
@@ -220,6 +282,8 @@ function mapPoints(points, layers) {
         layers[lname].addTo(map);
       }
     }
+    
+map.addControl(searchControl);
 
     var pos = (getSetting('_pointsLegendPos') == 'off')
       ? 'topleft'
@@ -1003,7 +1067,7 @@ function mapPoints(points, layers) {
   }
 
 
-  /**
+  /** 
    * Loads the basemap and adds it to the map
    */
   function addBaseMap() {
@@ -1024,7 +1088,22 @@ function mapPoints(points, layers) {
       position: trySetting('_mapAttribution', 'bottomright')
     }).addTo(map);
 
-  }
+  } 
+
+// --- Basemap Layers ---
+var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+
+var esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+
+// Add default (Esri now)
+esriSat.addTo(map);
+
+// Layer switcher
+var baseLayers = {
+    "OpenStreetMap": osm,
+    "Esri World Imagery": esriSat
+};
+L.control.layers(baseLayers).addTo(map);
 
   /**
    * Returns the value of a setting s
