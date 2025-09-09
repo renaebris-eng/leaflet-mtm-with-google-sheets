@@ -182,23 +182,18 @@ var marker = L.marker([lat, lng], {
   Description: point.Description
 }).bindPopup(popupContent);
 
-// Small helper to clean text
+    // Small helper to clean text
 function cleanText(str) {
   return (str || "").replace(/\s+/g, " ").trim();
 }
-    
-// Add a combined search string
+    // --- Marker search data ---
 marker.searchData =
   cleanText(point.Name) + " " +
   cleanText(point.Vehicle) + " " +
   cleanText(point.Description);
 
-// Ensure the marker has a feature object for Leaflet Search
 if (!marker.feature) marker.feature = { type: "Feature", properties: {} };
 marker.feature.properties.searchData = marker.searchData;
-
-// Debug log
-console.log("Marker created:", marker.options.title, "searchData:", marker.searchData);
 
 // Add to appropriate layer or directly to map
 if (point.Group && layers && layers[point.Group]) {
@@ -216,43 +211,79 @@ markerArray.push(marker);
 // --- Combine all markers into a single feature group for search ---
 var allMarkers = L.featureGroup(markerArray);
 
-// --- Add Leaflet Search control --- 219
-var searchControl = new L.Control.Search({
+// --- Custom merged search control ---
+var mergedSearch = new L.Control.Search({
   layer: allMarkers,
-  propertyName: 'searchData',   // Tells Leaflet Search what to match
+  propertyName: 'searchData',
   initial: false,
-  zoom: false,                  // we’ll control zoom manually
+  zoom: false,
   marker: false,
-  textPlaceholder: 'Search by Name, Vehicle, or Description...',
-
-    // show only the Name in the suggestions
-    textFormatter: function(marker) {
-      return marker.options.title || marker.Name || "";  
-      // make sure your marker has a "title" or "Name" property
-    },
+  textPlaceholder: 'Search by Name, Vehicle, Description, or Place...',
+  textErr: '',  // 👈 hides "Location not found"
+  
+  textFormatter: function(marker) {
+    return marker.options.title || marker.Name || "";
+  },
 
   moveToLocation: function(latlng, title, map) {
-    // Find the marker that matches the search result
+    // First try to find a marker match
     var marker = allMarkers.getLayers().find(function(m) {
       return m.searchData && m.searchData.includes(title);
     });
 
-
-    if (!marker) return; // safety check
-
-    if (clusterGroup) {
-      clusterGroup.zoomToShowLayer(marker, function() {
-        map.setView(marker.getLatLng(), 16);  // 👈 zoom FIRST
-        marker.openPopup();                   // 👈 then open popup
-      });
+    if (marker) {
+      if (clusterGroup) {
+        clusterGroup.zoomToShowLayer(marker, function() {
+          map.setView(marker.getLatLng(), 16);
+          marker.openPopup();
+        });
+      } else {
+        map.setView(marker.getLatLng(), 16);
+        marker.openPopup();
+      }
     } else {
-      map.setView(marker.getLatLng(), 16);
-      marker.openPopup();
+      // If no marker matched, fallback to Nominatim
+      L.Control.Geocoder.nominatim().geocode(title, function(results) {
+        if (results && results.length > 0) {
+          var r = results[0];
+          map.setView(r.center, 14);
+          L.popup().setLatLng(r.center).setContent(r.name).openOn(map);
+        }
+      });
     }
   }
 });
 
-map.addControl(searchControl);
+map.addControl(mergedSearch);
+
+// --- Fallback: when no suggestions appear, run Nominatim ---
+mergedSearch.on('search:locationfound', function(e) {
+  // this fires only for marker matches
+});
+
+// catch manual input where no marker suggestions exist
+mergedSearch._input.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    var query = mergedSearch._input.value;
+    if (!query) return;
+
+    // Check if any markers match
+    var markerMatch = allMarkers.getLayers().some(function(m) {
+      return m.searchData && m.searchData.includes(query);
+    });
+
+    if (!markerMatch) {
+      // Run Nominatim directly
+      L.Control.Geocoder.nominatim().geocode(query, function(results) {
+        if (results && results.length > 0) {
+          var r = results[0];
+          map.setView(r.center, 14);
+          L.popup().setLatLng(r.center).setContent(r.name).openOn(map);
+        }
+      });
+    }
+  }
+});
 
   var group = L.featureGroup(markerArray);
   var clusters = (getSetting('_markercluster') === 'on') ? true : false;
@@ -282,8 +313,6 @@ map.addControl(searchControl);
         layers[lname].addTo(map);
       }
     }
-    
-map.addControl(searchControl);
 
     var pos = (getSetting('_pointsLegendPos') == 'off')
       ? 'topleft'
@@ -771,31 +800,6 @@ map.addControl(searchControl);
       completePolygons = true;
     }
 
-    // Add Nominatim Search control
-    if (getSetting('_mapSearch') !== 'off') {
-      var geocoder = L.Control.geocoder({
-        expand: 'click',
-        position: getSetting('_mapSearch'),
-        
-        geocoder: L.Control.Geocoder.nominatim({
-          geocodingQueryParams: {
-            viewbox: '',  // by default, viewbox is empty
-            bounded: 1,
-          }
-        }),
-      }).addTo(map);
-
-      function updateGeocoderBounds() {
-        var bounds = map.getBounds();
-        geocoder.options.geocoder.options.geocodingQueryParams.viewbox = [
-            bounds._southWest.lng, bounds._southWest.lat,
-            bounds._northEast.lng, bounds._northEast.lat
-          ].join(',');
-      }
-
-      // Update search viewbox coordinates every time the map moves
-      map.on('moveend', updateGeocoderBounds);
-    }
 
     // Add location control
     if (getSetting('_mapMyLocation') !== 'off') {
